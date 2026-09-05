@@ -156,3 +156,89 @@
     background-position: -200% 0;
   }
 }
+
+/* ----------------------------------------------------------------------
+ * Active-trigger alert strobes — fire when the FFEWS trips an evacuation
+ * directive (alert level ≥ EXTREME). Two intensities:
+ *   .strobe-amber  — EXTREME / HIGH (amber-orange pulse)
+ *   .strobe-red    — CATACLYSMIC (red-rose hard strobe)
+ * Respects prefers-reduced-motion.
+ * -------------------------------------------------------------------- */
+.ews-app .strobe-amber {
+  animation: ews-strobe-amber 1s ease-in-out infinite;
+}
+@keyframes ews-strobe-amber {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 rgba(249, 115, 22, 0.0), 0 0 0 0 rgba(249, 115, 22, 0);
+    background-color: rgba(249, 115, 22, 0.12);
+  }
+  50% {
+    box-shadow: 0 0 0 3px rgba(249, 115, 22, 0.55),
+      0 0 18px 2px rgba(249, 115, 22, 0.45);
+    background-color: rgba(249, 115, 22, 0.3);
+  }
+}
+.ews-app .strobe-red {
+  animation: ews-strobe-red 0.6s steps(1, end) infinite;
+}
+@keyframes ews-strobe-red {
+  0%,
+  49% {
+    background-color: rgba(225, 29, 72, 0.45);
+    box-shadow: 0 0 0 3px rgba(244, 63, 94, 0.85),
+      0 0 22px 4px rgba(244, 63, 94, 0.6);
+    color: #fff5f5;
+  }
+  50%,
+  100% {
+    background-color: rgba(136, 19, 55, 0.18);
+    box-shadow: 0 0 0 0 rgba(244, 63, 94, 0);
+    color: #fecdd3;
+  }
+}
+.ews-app .alert-strobe-pulse {
+  animation: ews-pulse-ring 1.1s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+@keyframes ews-pulse-ring {
+  0% {
+    box-shadow: 0 0 0 0 rgba(244, 63, 94, 0.7);
+  }
+  70% {
+    box-shadow: 0 0 0 10px rgba(244, 63, 94, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(244, 63, 94, 0);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .ews-app .strobe-amber,
+  .ews-app .strobe-red,
+  .ews-app .alert-strobe-pulse {
+    animation: none;
+  }
+}
+
+/* ----------------------------------------------------------------------
+ * Print stylesheet — only the SITREP directive prints to PDF.
+ * Tag the printable container with `.sitrep-print-root` and the app with
+ * `.ews-app` ; everything else is suppressed.
+ * -------------------------------------------------------------------- */
+@media print {
+  .ews-app > header,
+  .ews-app > main,
+  .ews-app > footer,
+  .ews-app .no-print {
+    display: none !important;
+  }
+  .sitrep-print-host {
+    display: block !important;
+  }
+  body {
+    background: #fff !important;
+    color: #000 !important;
+  }
+}
+.ews-app .sitrep-print-host {
+  display: none;
+}

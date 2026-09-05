@@ -12,13 +12,19 @@ import {
 } from "@/components/ews/TelemetryControls";
 import { Results } from "@/components/ews/Results";
 import { WardDetailPanel } from "@/components/ews/WardDetailPanel";
+import { SitrepModal } from "@/components/ews/SitrepModal";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { useAlertSiren } from "@/hooks/useAlertSiren";
 import {
   Satellite,
   CloudLightning,
   ShieldAlert,
   Activity,
   Github,
+  Volume2,
+  VolumeX,
+  Send,
 } from "lucide-react";
 
 const DEFAULT_RAIN = 18;
@@ -58,6 +64,31 @@ export default function Home() {
     "UK-CHM-UPPER"
   );
   const [error, setError] = useState<string | null>(null);
+  const [sitrepOpen, setSitrepOpen] = useState(false);
+  const siren = useAlertSiren();
+
+  // Arm the Web Audio context on the first user interaction (autoplay policy).
+  useEffect(() => {
+    const onGesture = () => siren.arm();
+    window.addEventListener("pointerdown", onGesture, { once: true });
+    window.addEventListener("keydown", onGesture, { once: true });
+    return () => {
+      window.removeEventListener("pointerdown", onGesture);
+      window.removeEventListener("keydown", onGesture);
+    };
+  }, [siren]);
+
+  // Drive the siren from the basin alert level. EXTREME/CATACLYSMIC trigger
+  // the wail; anything below silences it. Respects the mute toggle.
+  useEffect(() => {
+    const level = result?.basin_wide_alert_level;
+    const active = level === "EXTREME" || level === "CATACLYSMIC";
+    if (active && !siren.muted) {
+      siren.start();
+    } else {
+      siren.stop();
+    }
+  }, [result?.basin_wide_alert_level, siren.muted, siren]);
 
   // Bootstrap: load catchment catalogue
   useEffect(() => {
@@ -201,7 +232,39 @@ export default function Home() {
             >
               <ShieldAlert className="h-3 w-3 text-rose-400" /> NDRF
             </Badge>
-            <AlertBadge level={alertLevel} />
+
+            {/* Siren mute toggle — visible only once audio is armed or active */}
+            <button
+              type="button"
+              onClick={siren.toggleMute}
+              aria-label={siren.muted ? "Unmute alert siren" : "Mute alert siren"}
+              title={siren.muted ? "Alert siren muted" : "Alert siren armed"}
+              className={`flex h-6 w-6 items-center justify-center rounded-md border text-[10px] transition ${
+                siren.muted
+                  ? "border-slate-700 bg-slate-800 text-slate-500 hover:bg-slate-700"
+                  : siren.active
+                    ? "border-rose-500 bg-rose-500/20 text-rose-300 alert-strobe-pulse"
+                    : "border-slate-700 bg-slate-800 text-slate-300 hover:bg-slate-700"
+              }`}
+            >
+              {siren.muted ? (
+                <VolumeX className="h-3 w-3" />
+              ) : (
+                <Volume2 className="h-3 w-3" />
+              )}
+            </button>
+
+            <AlertBadge level={alertLevel} active={siren.active} />
+
+            <Button
+              size="sm"
+              onClick={() => setSitrepOpen(true)}
+              disabled={!result}
+              className="h-7 gap-1 bg-amber-500 px-2.5 text-[11px] font-semibold text-slate-950 hover:bg-amber-400"
+            >
+              <Send className="h-3.5 w-3.5" />
+              Dispatch NDRF SITREP
+            </Button>
           </div>
         </div>
       </header>
@@ -288,6 +351,18 @@ export default function Home() {
           </span>
         </div>
       </footer>
+
+      {/* ---------------- SITREP dispatch modal ---------------- */}
+      <SitrepModal
+        open={sitrepOpen}
+        onOpenChange={setSitrepOpen}
+        telemetry={telemetry.map((t) => ({
+          wardId: t.ward_id,
+          rainfall: t.rainfall,
+          moisture: t.moisture,
+        }))}
+        cascade={result}
+      />
     </div>
   );
 }
@@ -300,7 +375,7 @@ function SectionTitle({ children }: { children: React.ReactNode }) {
   );
 }
 
-function AlertBadge({ level }: { level: string }) {
+function AlertBadge({ level, active }: { level: string; active?: boolean }) {
   const styles: Record<string, string> = {
     LOW: "border-emerald-600/50 bg-emerald-500/15 text-emerald-300",
     MODERATE: "border-amber-600/50 bg-amber-500/15 text-amber-300",
@@ -308,9 +383,17 @@ function AlertBadge({ level }: { level: string }) {
     EXTREME: "border-red-600/50 bg-red-500/15 text-red-300",
     CATACLYSMIC: "border-rose-600/60 bg-rose-600/20 text-rose-300",
   };
+  // Strobe only when the siren is actively firing AND the level is severe —
+  // i.e. a genuine evacuation trigger, not just a static risk classification.
+  const strobe =
+    active && (level === "CATACLYSMIC"
+      ? "strobe-red"
+      : level === "EXTREME"
+        ? "strobe-amber"
+        : "");
   return (
     <span
-      className={`flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-bold tracking-wide ${styles[level] ?? styles.LOW}`}
+      className={`flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-bold tracking-wide ${styles[level] ?? styles.LOW} ${strobe}`}
     >
       <ShieldAlert className="h-3 w-3" />
       {level}
