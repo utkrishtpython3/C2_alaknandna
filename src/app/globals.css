@@ -242,3 +242,42 @@
 .ews-app .sitrep-print-host {
   display: none;
 }
+
+/* ----------------------------------------------------------------------
+ * Phase 4 — animated evacuation flow arrows + infra flashing nodes
+ * -------------------------------------------------------------------- */
+.ews-app .evac-arrow {
+  stroke-dasharray: 8 5;
+  animation: ews-evac-march 0.7s linear infinite;
+}
+@keyframes ews-evac-march {
+  0% {
+    stroke-dashoffset: 0;
+  }
+  100% {
+    stroke-dashoffset: -13;
+  }
+}
+.ews-app .infra-flash-red {
+  animation: ews-infra-flash 0.5s steps(1, end) infinite;
+}
+@keyframes ews-infra-flash {
+  0%,
+  49% {
+    fill: #7f1d1d;
+    stroke: #f43f5e;
+    r: 7;
+  }
+  50%,
+  100% {
+    fill: #450a0a;
+    stroke: #fda4af;
+    r: 5.5;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .ews-app .evac-arrow,
+  .ews-app .infra-flash-red {
+    animation: none;
+  }
+}

@@ -24,6 +24,12 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import {
+  generateSitrepData,
+  downloadSitrepJSON,
+  type SimulationState,
+} from "@/lib/generateSitrep";
+import { usePresentationControls } from "@/hooks/usePresentationControls";
+import {
   Satellite,
   CloudLightning,
   ShieldAlert,
@@ -36,6 +42,9 @@ import {
   Map as MapIcon,
   LineChart as LineChartIcon,
   RadioTower,
+  Keyboard,
+  ChevronUp,
+  ChevronDown,
 } from "lucide-react";
 
 const SCENARIO_META: Record<
@@ -237,6 +246,39 @@ export default function Home() {
     };
   }, [result, selectedTelemetry, selectedWard]);
 
+  // Ward elevation_min lookup (from the catchment features) — used for the
+  // SITREP's evacuation corridor elevation differentials.
+  const wardElevationMin = useMemo(() => {
+    const m: Record<string, number> = {};
+    for (const f of features) m[f.properties.ward_id] = f.properties.elevation_min_m;
+    return m;
+  }, [features]);
+
+  // Download the NDRF Incident SITREP JSON (triggered by the "S" hotkey
+  // or a UI button).
+  const handleDownloadSitrep = useCallback(() => {
+    if (!result) return;
+    const state: SimulationState = {
+      cascade: result,
+      soilMoisture: Object.fromEntries(
+        telemetry.map((t) => [t.ward_id, t.moisture])
+      ),
+      wardElevationMin,
+    };
+    const report = generateSitrepData(state);
+    downloadSitrepJSON(report);
+  }, [result, telemetry, wardElevationMin]);
+
+  // Presentation keyboard hotkeys (1/2/3/M/D/S).
+  const { guideVisible, toggleGuide, lastKey } = usePresentationControls({
+    onScenario: applyScenario,
+    onToggleSiren: () =>
+      window.dispatchEvent(new CustomEvent("ews:toggle-siren")),
+    onOpenDispatch: () => setDispatchOpen(true),
+    onDownloadSitrep: handleDownloadSitrep,
+    enabled: !dispatchOpen,
+  });
+
   return (
     <div className="ews-app flex min-h-screen flex-col bg-slate-950 text-slate-100">
       {/* ---------------- Header ---------------- */}
@@ -387,6 +429,8 @@ export default function Home() {
                   riskStates={riskStates}
                   selectedWard={selectedWard}
                   onSelectWard={setSelectedWard}
+                  surgeActive={surgeActive}
+                  alertLevel={result?.basin_wide_alert_level ?? "LOW"}
                 />
               </TabsContent>
               <TabsContent value="charts">
@@ -499,6 +543,53 @@ export default function Home() {
         }))}
         cascade={result}
       />
+
+      {/* ---------------- Pitch controls guide (collapsible) ---------------- */}
+      <div className="no-print fixed bottom-3 right-3 z-40 select-none">
+        {lastKey && (
+          <div className="mb-1.5 flex items-center justify-end gap-1.5 animate-pulse">
+            <span className="rounded-md border border-amber-500/50 bg-slate-900/90 px-2 py-1 font-mono text-[10px] font-bold text-amber-300 shadow-lg">
+              ⌘ {lastKey}
+            </span>
+          </div>
+        )}
+        {guideVisible ? (
+          <div className="w-64 rounded-lg border border-slate-700 bg-slate-950/95 p-3 shadow-2xl backdrop-blur">
+            <div className="mb-2 flex items-center justify-between">
+              <span className="flex items-center gap-1.5 text-[11px] font-bold text-slate-100">
+                <Keyboard className="h-3.5 w-3.5 text-amber-400" />
+                Pitch Controls
+              </span>
+              <button
+                type="button"
+                onClick={toggleGuide}
+                className="rounded p-0.5 text-slate-500 hover:bg-slate-800 hover:text-slate-300"
+                aria-label="Collapse pitch controls guide"
+              >
+                <ChevronDown className="h-3.5 w-3.5" />
+              </button>
+            </div>
+            <ul className="space-y-1 text-[10px] text-slate-300">
+              <HotkeyRow k="1" label="Dry / Pre-Monsoon Baseline" />
+              <HotkeyRow k="2" label="Active Monsoon Saturated" />
+              <HotkeyRow k="3" label="Cataclysmic Cloudburst Cascade" />
+              <HotkeyRow k="M" label="Toggle Audio Klaxon Siren" />
+              <HotkeyRow k="D" label="Open CAP Dispatch Modal" />
+              <HotkeyRow k="S" label="Download NDRF SITREP JSON" />
+            </ul>
+          </div>
+        ) : (
+          <button
+            type="button"
+            onClick={toggleGuide}
+            className="flex items-center gap-1.5 rounded-lg border border-slate-700 bg-slate-950/90 px-2.5 py-1.5 text-[10px] font-semibold text-slate-300 shadow-lg backdrop-blur transition hover:border-amber-500/50 hover:text-amber-300"
+          >
+            <Keyboard className="h-3.5 w-3.5" />
+            Hotkeys
+            <ChevronUp className="h-3 w-3 opacity-60" />
+          </button>
+        )}
+      </div>
     </div>
   );
 }
@@ -508,6 +599,17 @@ function SectionTitle({ children }: { children: React.ReactNode }) {
     <h2 className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-slate-400">
       {children}
     </h2>
+  );
+}
+
+function HotkeyRow({ k, label }: { k: string; label: string }) {
+  return (
+    <li className="flex items-center gap-2">
+      <kbd className="inline-flex h-5 min-w-5 items-center justify-center rounded border border-slate-600 bg-slate-800 px-1 font-mono text-[10px] font-bold text-amber-300">
+        {k}
+      </kbd>
+      <span className="text-slate-300">{label}</span>
+    </li>
   );
 }
 

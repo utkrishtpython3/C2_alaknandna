@@ -135,6 +135,14 @@ export function TacticalAlertBanner({
     }
   }, [isSevere, siren.muted, siren]);
 
+  // Listen for external "toggle siren" requests (from the presentation
+  // hotkey controller at the page level — the M key).
+  useEffect(() => {
+    const onToggle = () => siren.toggleMute();
+    window.addEventListener("ews:toggle-siren", onToggle);
+    return () => window.removeEventListener("ews:toggle-siren", onToggle);
+  }, [siren]);
+
   // Animated countdown timer (seconds) to surge arrival at Vishnuprayag.
   // Seeded lazily inside the interval callback (no synchronous setState in
   // the effect body) to satisfy react-hooks/set-state-in-effect.
