@@ -248,7 +248,10 @@ export function CatchmentTelemetryCharts({
             <div className="mb-1 flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wider text-slate-400">
               <CloudRain className="h-3 w-3 text-amber-400" />
               Rainfall intensity vs FFG threshold
-              <span className="ml-auto font-mono text-slate-500">mm/hr · 6h past + 2h forecast</span>
+              <span className="ml-auto flex items-center gap-2 font-mono font-normal text-slate-500">
+                <span className="flex items-center gap-1"><span className="inline-block h-0.5 w-3 bg-amber-400" />Rainfall</span>
+                <span className="flex items-center gap-1"><span className="inline-block h-0.5 w-3 border-t border-dashed border-cyan-400" />FFG threshold</span>
+              </span>
             </div>
             <div className="h-44 w-full">
               <ResponsiveContainer width="100%" height="100%">
@@ -286,18 +289,13 @@ export function CatchmentTelemetryCharts({
                     strokeOpacity={0.2}
                     strokeDasharray="2 2"
                   />
-                  {/* Dynamic FFG threshold line */}
+                  {/* "Now" vertical reference line */}
                   <ReferenceLine
-                    y={data.series[0]?.ffg_threshold_mm_hr ?? 0}
-                    stroke="#22d3ee"
-                    strokeDasharray="5 3"
-                    strokeWidth={1.5}
-                    label={{
-                      value: "FFG",
-                      position: "insideTopLeft",
-                      fill: "#22d3ee",
-                      fontSize: 9,
-                    }}
+                    x={chartData.find((d) => d.offsetMin === 0)?.label}
+                    stroke="#94a3b8"
+                    strokeDasharray="2 2"
+                    strokeWidth={1}
+                    label={{ value: "NOW", position: "top", fill: "#94a3b8", fontSize: 8 }}
                   />
                   {/* Rainfall area */}
                   <Area
@@ -406,6 +404,14 @@ export function CatchmentTelemetryCharts({
                     strokeOpacity={0.2}
                     strokeDasharray="2 2"
                   />
+                  {/* "Now" vertical reference line */}
+                  <ReferenceLine
+                    yAxisId="left"
+                    x={chartData.find((d) => d.offsetMin === 0)?.label}
+                    stroke="#94a3b8"
+                    strokeDasharray="2 2"
+                    strokeWidth={1}
+                  />
                   {/* Critical bankfull stage reference */}
                   <ReferenceLine
                     yAxisId="right"
@@ -415,7 +421,7 @@ export function CatchmentTelemetryCharts({
                     strokeWidth={1.5}
                     label={{
                       value: `BANKFULL ${bankfull.toFixed(2)}m`,
-                      position: "insideTopRight",
+                      position: "insideBottomRight",
                       fill: "#f43f5e",
                       fontSize: 9,
                     }}

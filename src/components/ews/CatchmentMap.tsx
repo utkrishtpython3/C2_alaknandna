@@ -434,15 +434,12 @@ export function CatchmentMap({
           evacCorridors.map((corridor) => {
             const [fx, fy] = project(corridor.from);
             const [tx, ty] = project(corridor.to);
-            // Curved path with a slight offset for visual clarity.
-            const midX = (fx + tx) / 2 + 12;
-            const midY = (fy + ty) / 2 - 8;
+            const midX = (fx + tx) / 2 + 14;
+            const midY = (fy + ty) / 2 - 10;
             const d = `M ${fx.toFixed(1)},${fy.toFixed(1)} Q ${midX.toFixed(1)},${midY.toFixed(1)} ${tx.toFixed(1)},${ty.toFixed(1)}`;
             return (
               <g key={corridor.id} style={{ pointerEvents: "none" }}>
-                {/* glow underlay */}
-                <path d={d} fill="none" stroke="#10b981" strokeWidth="6" strokeLinecap="round" opacity="0.15" />
-                {/* animated dashed neon-emerald vector */}
+                <path d={d} fill="none" stroke="#10b981" strokeWidth="7" strokeLinecap="round" opacity="0.12" />
                 <path
                   d={d}
                   fill="none"
@@ -453,11 +450,8 @@ export function CatchmentMap({
                   className="evac-arrow"
                   opacity="0.95"
                 />
-                {/* source node (at-risk) */}
                 <circle cx={fx} cy={fy} r="3" fill="#f43f5e" stroke="#fff" strokeWidth="0.8" />
-                {/* destination node (safe) */}
                 <circle cx={tx} cy={ty} r="3.5" fill="#10b981" stroke="#fff" strokeWidth="0.8" />
-                {/* margin label */}
                 <text
                   x={midX}
                   y={midY - 4}
@@ -465,7 +459,10 @@ export function CatchmentMap({
                   fontSize="8"
                   fontWeight="700"
                   fill="#6ee7b7"
-                  style={{ pointerEvents: "none" }}
+                  style={{ pointerEvents: "none", paintOrder: "stroke" }}
+                  stroke="#0f172a"
+                  strokeWidth="2"
+                  strokeOpacity="0.8"
                 >
                   +{corridor.margin_m}m
                 </text>
@@ -506,18 +503,18 @@ export function CatchmentMap({
                 strokeWidth="1.8"
                 className={vuln.flashing ? "infra-flash-red" : ""}
               />
-              <text x={x} y={y + 2} textAnchor="middle" fontSize="6.5" fontWeight="800" fill={vuln.textColor} style={{ pointerEvents: "none" }}>
+              <text x={x} y={y + 2} textAnchor="middle" fontSize="6.5" fontWeight="800" fill={vuln.textColor} style={{ pointerEvents: "none", paintOrder: "stroke" }} stroke="#0f172a" strokeWidth="1.5" strokeOpacity="0.7">
                 {infraGlyph(m.type)}
               </text>
-              {vuln.status !== "NOMINAL" && (
-                <text x={x} y={y - 8} textAnchor="middle" fontSize="6" fontWeight="700" fill={vuln.stroke} style={{ pointerEvents: "none" }}>
+              {vuln.status !== "NOMINAL" && vuln.status !== "ADVISORY" && (
+                <text x={x} y={y - 9} textAnchor="middle" fontSize="6" fontWeight="700" fill={vuln.stroke} style={{ pointerEvents: "none", paintOrder: "stroke" }} stroke="#0f172a" strokeWidth="2" strokeOpacity="0.85">
                   {vuln.status === "INUNDATION_IMMINENT"
                     ? "INUND"
                     : vuln.status === "INTERDICTED"
                       ? "CUT"
                       : vuln.status === "SHUTDOWN"
                         ? "SDN"
-                        : "ADV"}
+                        : ""}
                 </text>
               )}
               <title>{`${m.name} — ${vuln.label}`}</title>

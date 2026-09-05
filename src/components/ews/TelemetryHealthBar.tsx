@@ -129,10 +129,10 @@ export function TelemetryHealthBar({ severe }: TelemetryHealthBarProps) {
   );
 
   return (
-    <div className="flex flex-col gap-1.5 rounded-lg border border-slate-800 bg-slate-950/80 px-3 py-2">
+    <div className="flex flex-col gap-1.5 rounded-lg border border-cyan-900/40 bg-slate-950/80 px-3 py-2 shadow-lg shadow-slate-950/50">
       <div className="flex flex-wrap items-center gap-2 text-[10px]">
-        <span className="flex items-center gap-1.5 font-semibold uppercase tracking-wider text-slate-400">
-          <Wifi className="h-3 w-3 text-cyan-400" />
+        <span className="flex items-center gap-1.5 font-semibold uppercase tracking-wider text-cyan-300">
+          <Wifi className="h-3 w-3" />
           Telemetry Uplink Survivability
         </span>
         <span className="ml-auto flex items-center gap-1.5 text-slate-500">

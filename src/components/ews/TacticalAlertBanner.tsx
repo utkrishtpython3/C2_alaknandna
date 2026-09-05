@@ -288,14 +288,15 @@ export function TacticalAlertBanner({
         </p>
       </div>
 
-      {/* Full-width red perimeter strobe overlay for RED state */}
+      {/* Full-width red perimeter glow overlay for RED state (refined —
+          keeps text readable, no hard background flips) */}
       {isRed && (
         <div
-          className="pointer-events-none absolute inset-0 rounded-lg border-2 border-rose-500"
+          className="pointer-events-none absolute inset-0 rounded-lg"
           style={{
             boxShadow:
-              "inset 0 0 24px 2px rgba(244,63,94,0.35), 0 0 18px 2px rgba(244,63,94,0.25)",
-            animation: "ews-strobe-red 0.6s steps(1, end) infinite",
+              "inset 0 0 0 2px rgba(244,63,94,0.5), inset 0 0 24px 2px rgba(244,63,94,0.18)",
+            animation: "ews-strobe-red 1.2s ease-in-out infinite",
           }}
         />
       )}

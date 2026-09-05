@@ -92,7 +92,7 @@ export function Results({ result, selectedWard, onSelectWard }: ResultsProps) {
       </div>
 
       {/* Per-ward risk cards */}
-      <div className="grid grid-cols-1 gap-3 lg:grid-cols-3">
+      <div className="grid grid-cols-1 items-stretch gap-3 lg:grid-cols-3">
         {result.per_ward_risk.map((w) => (
           <WardCard
             key={w.ward_id}
@@ -147,7 +147,7 @@ function WardCard({
   return (
     <button
       onClick={onSelect}
-      className={`flex flex-col gap-3 rounded-lg border bg-slate-900/70 p-4 text-left transition hover:border-slate-600 ${
+      className={`flex h-full flex-col gap-3 rounded-lg border bg-slate-900/70 p-4 text-left transition hover:border-slate-600 ${
         selected ? "border-amber-500 ring-1 ring-amber-500/40" : "border-slate-800"
       }`}
     >
@@ -198,18 +198,18 @@ function WardCard({
         </p>
         <ul className="mt-1.5 space-y-1">
           {ward.evacuation_plan.slice(0, 3).map((e) => (
-            <li key={e.shelter_id} className="flex items-center justify-between text-[10px]">
-              <span className="truncate text-slate-300">{e.name}</span>
-              <span className="ml-2 shrink-0 font-mono text-emerald-300">{e.elevation_m}m</span>
+            <li key={e.shelter_id} className="flex items-start justify-between gap-2 text-[10px]">
+              <span className="break-words leading-tight text-slate-300">{e.name}</span>
+              <span className="shrink-0 font-mono text-emerald-300">{e.elevation_m}m</span>
             </li>
           ))}
         </ul>
       </div>
 
       {ward.threshold_exceeded && (
-        <p className="flex items-start gap-1.5 text-[10px] leading-snug text-rose-300">
+        <p className="mt-auto flex items-start gap-1.5 text-[10px] leading-snug text-rose-300">
           <AlertTriangle className="mt-0.5 h-3 w-3 shrink-0" />
-          {ward.recommended_action}
+          <span className="break-words">{ward.recommended_action}</span>
         </p>
       )}
     </button>

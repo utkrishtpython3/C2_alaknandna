@@ -406,17 +406,17 @@ export default function Home() {
             <Tabs defaultValue="map" className="w-full">
               <div className="mb-2 flex items-center justify-between">
                 <SectionTitle>Operations viewport</SectionTitle>
-                <TabsList className="h-7 bg-slate-900 p-0.5">
+                <TabsList className="h-7 bg-slate-900 p-0.5 ring-1 ring-slate-700">
                   <TabsTrigger
                     value="map"
-                    className="h-6 gap-1 px-2.5 text-[11px] data-[state=active]:bg-slate-700 data-[state=active]:text-amber-300"
+                    className="h-6 gap-1 px-2.5 text-[11px] font-semibold data-[state=active]:bg-amber-500 data-[state=active]:text-slate-950 data-[state=inactive]:text-slate-400"
                   >
                     <MapIcon className="h-3.5 w-3.5" />
                     Hazard map
                   </TabsTrigger>
                   <TabsTrigger
                     value="charts"
-                    className="h-6 gap-1 px-2.5 text-[11px] data-[state=active]:bg-slate-700 data-[state=active]:text-amber-300"
+                    className="h-6 gap-1 px-2.5 text-[11px] font-semibold data-[state=active]:bg-amber-500 data-[state=active]:text-slate-950 data-[state=inactive]:text-slate-400"
                   >
                     <LineChartIcon className="h-3.5 w-3.5" />
                     Hydrograph

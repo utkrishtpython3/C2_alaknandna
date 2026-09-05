@@ -393,16 +393,16 @@ function DispatchDocument({
               <FileText className="h-3 w-3" />
               CAP 1.2 Payload
             </h4>
-            <TabsList className="h-7 bg-slate-900 p-0.5">
+            <TabsList className="h-7 bg-slate-900 p-0.5 ring-1 ring-slate-700">
               <TabsTrigger
                 value="xml"
-                className="h-6 px-2 text-[10px] data-[state=active]:bg-slate-700 data-[state=active]:text-amber-300"
+                className="h-6 px-2.5 text-[10px] font-bold data-[state=active]:bg-amber-500 data-[state=active]:text-slate-950 data-[state=inactive]:text-slate-400"
               >
                 XML
               </TabsTrigger>
               <TabsTrigger
                 value="json"
-                className="h-6 px-2 text-[10px] data-[state=active]:bg-slate-700 data-[state=active]:text-amber-300"
+                className="h-6 px-2.5 text-[10px] font-bold data-[state=active]:bg-amber-500 data-[state=active]:text-slate-950 data-[state=inactive]:text-slate-400"
               >
                 JSON
               </TabsTrigger>
