@@ -59,3 +59,21 @@ Stage Summary:
 - DisasterDispatchModal: CAP 1.2 XML+JSON payload, NDRF-08-BN-CHAMOLI sender, multi-channel broadcast checklist with Simulate Radio Relay, Copy/Download actions.
 - TelemetryHealthBar: SATCOM (GSAT-7A) + VHF/LoRa mesh + 4G/5G failover with survivability score.
 - 55/45 layout, scenario toggles, dark tactical styling, sticky footer, mobile-responsive. All browser-verified end-to-end.
+
+---
+Task ID: 4
+Agent: main (Z.ai Code)
+Task: Ingest the uploaded `Dholi_ganga.json` (Open-Meteo 93-day daily forecast for the Dhauliganga headwaters, lat 30.615/lng 79.717/elev 3555m, Jun 5 → Sep 5 2026) as a real meteorological data feed into the FFEWS, with cloudburst-day detection and click-to-load-into-EWS integration.
+
+Work Log:
+- Copied `upload/Dholi_ganga.json` → `src/data/Dholi_ganga.json` (3,291 bytes, 93 days). Validated: daily time/temperature_2m_max/temperature_2m_min/rain_sum/wind_speed_10m_max arrays; total seasonal rain 277.3mm; peak day 18.2mm on 2026-08-10; 5 cloudburst-class days (rain ≥ 10mm).
+- Built `src/lib/dhauligangaMeteo.ts` (server-only, `node:fs`): `OpenMeteoDailyResponse` + `MeteoForecastDay` + `DhauligangaMeteo` types; `loadDhauligangaMeteoRaw()` disk loader; `parseDhauligangaMeteo()` derives per-day: 7-day antecedent precipitation index (API-7), soil-moisture proxy (API-7 normalised to a 60mm saturation envelope, floored at 15%), effective hourly intensity (cloudburst days → 1-hour convective burst = rain_sum mm/hr; other days → 24h spread), cloudburst classification (rain ≥ 10mm), severity ordinal (dry/wet/heavy/cloudburst). Totals: seasonal rain, cloudburst-day count, max daily rain + date, mean Tmax, max wind.
+- Built `src/app/api/meteo/dhauliganga/route.ts` — GET returns the parsed `DhauligangaMeteo` (station coords/elev, 93-day window, totals, derived days).
+- Built `src/components/ews/MeteoForecastPanel.tsx` — Recharts `ComposedChart`: rainfall bars coloured by severity (dry=slate, wet=cyan, heavy=amber, cloudburst=rose) + temperature-max line (orange, right axis) + `ReferenceDot` markers on cloudburst days. Click any bar → `onLoadDay` callback. Legend, station metadata strip (lat/lng/elev/window/source), climate-summary stats (seasonal rain, mean Tmax, max wind, cloudburst days), and a "Detected cloudburst days" button strip (each showing date + rain + effective intensity + moisture). Loaded-day highlight (amber stroke on the bar + "Loaded into EWS" banner with the day's derived fields).
+- Wired into `src/app/page.tsx`: new `handleLoadMeteoDay(day)` sets each ward's rainfall to the day's effective intensity (clamped to 120 mm/hr) and soil moisture to the day's antecedent-moisture proxy (±3% ward adjustment: UPPER dries faster, LOWER holds moisture), clears the active scenario preset, sets `loadedMeteoDate`, and runs the cascade. Manual slider changes / scenario presets clear the loaded-date highlight. Panel placed full-width below the TelemetryHealthBar.
+- Verification (Agent Browser): meteo API returns 200 (93 days, 5 cloudburst days). Panel renders 1 Recharts SVG with 90+ rainfall bars + temperature line + cloudburst ReferenceDots. VLM confirmed: 93-day rainfall bar chart, orange temp line, red cloudburst markers, clickable date buttons, climate stats, no layout breakage. Click-to-load tested: Aug 10 (18.2mm/hr, 37% moist) → GREEN/NORMAL, Q≈27 m³/s (honest moderate rainfall); Jul 30 (10.3mm/hr, 50% moist) → GREEN/NORMAL, Q≈20 m³/s; sliders updated to 18/10 mm/hr, "Loaded into EWS" banner appeared with derived fields. Synthetic Cloudburst preset (96 mm/hr) still escalates to RED/CATACLYSMIC for worst-case planning contrast. Mobile 390px: no horizontal overflow. `bun run lint` clean, dev.log all 200.
+
+Stage Summary:
+- Real Open-Meteo Dhauliganga forecast (93-day monsoon) now drives the FFEWS via a Recharts forecast strip with cloudburst-day detection.
+- Click any forecast day (or cloudburst-day button) to load its effective hourly intensity + antecedent-moisture-derived soil state into the EWS cascade — honest real-data integration.
+- The real forecast days (10-18 mm/hr) produce GREEN/NORMAL (moderate monsoon rainfall); the synthetic Critical Cloudburst preset (96 mm/hr) remains for worst-case planning. Both coexist cleanly.

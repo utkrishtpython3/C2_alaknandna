@@ -18,6 +18,7 @@ import { CatchmentTelemetryCharts } from "@/components/ews/CatchmentTelemetryCha
 import { TacticalAlertBanner } from "@/components/ews/TacticalAlertBanner";
 import { DisasterDispatchModal } from "@/components/ews/DisasterDispatchModal";
 import { TelemetryHealthBar } from "@/components/ews/TelemetryHealthBar";
+import { MeteoForecastPanel } from "@/components/ews/MeteoForecastPanel";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
@@ -55,6 +56,7 @@ export default function Home() {
   const [error, setError] = useState<string | null>(null);
   const [dispatchOpen, setDispatchOpen] = useState(false);
   const [activeScenario, setActiveScenario] = useState<ScenarioId | null>(null);
+  const [loadedMeteoDate, setLoadedMeteoDate] = useState<string | null>(null);
 
   // Bootstrap: load catchment catalogue
   useEffect(() => {
@@ -120,6 +122,7 @@ export default function Home() {
     value: number
   ) => {
     setActiveScenario(null);
+    setLoadedMeteoDate(null);
     setTelemetry((prev) =>
       prev.map((t) => (t.ward_id === wardId ? { ...t, [field]: value } : t))
     );
@@ -135,12 +138,53 @@ export default function Home() {
       }));
       setTelemetry(next);
       setActiveScenario(scenarioId);
+      setLoadedMeteoDate(null);
       runCascade(next);
     },
     [telemetry, runCascade]
   );
 
   const handleReset = () => applyScenario("monsoon");
+
+  /**
+   * Load a real Dhauliganga forecast day into the EWS. Sets each ward's
+   * rainfall to the day's effective hourly intensity (1h burst for cloudburst
+   * days, 24h spread otherwise) and soil moisture to the day's antecedent
+   * 7-day-moisture proxy, then runs the cascade. This is the real-data
+   * integration point between the Open-Meteo forecast and the hydrology
+   * engine.
+   */
+  const handleLoadMeteoDay = (day: {
+    date: string;
+    rainfall_mm_hr: number;
+    soil_moisture_pct: number;
+    is_cloudburst: boolean;
+  }) => {
+    const next = telemetry.map((t) => ({
+      ...t,
+      rainfall: Math.min(120, Math.round(day.rainfall_mm_hr)),
+      // Use the forecast-derived moisture, slightly adjusted per ward
+      // (UPPER ridge dries faster, LOWER gorge holds moisture longer).
+      moisture: Math.min(
+        100,
+        Math.max(
+          0,
+          Math.round(
+            day.soil_moisture_pct +
+              (t.ward_id === "UK-CHM-UPPER"
+                ? -3
+                : t.ward_id === "UK-CHM-LOWER"
+                  ? +3
+                  : 0)
+          )
+        )
+      ),
+    }));
+    setTelemetry(next);
+    setActiveScenario(null);
+    setLoadedMeteoDate(day.date);
+    runCascade(next);
+  };
 
   const riskStates: WardRiskState[] = (result?.per_ward_risk ?? []).map((w) => ({
     ward_id: w.ward_id,
@@ -353,6 +397,15 @@ export default function Home() {
         {/* Telemetry health bar — full width */}
         <div className="mt-4">
           <TelemetryHealthBar severe={isSevere} />
+        </div>
+
+        {/* Dhauliganga meteo forecast — full width, real-data integration */}
+        <div className="mt-4">
+          <SectionTitle>Dhauliganga meteo forecast — real data feed</SectionTitle>
+          <MeteoForecastPanel
+            onLoadDay={handleLoadMeteoDay}
+            loadedDate={loadedMeteoDate}
+          />
         </div>
       </main>
 
