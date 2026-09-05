@@ -1,0 +1,290 @@
+{
+  "type": "FeatureCollection",
+  "name": "Upper Alaknanda-Dhauliganga Flash Flood Micro-Catchment Network",
+  "crs": {
+    "type": "name",
+    "properties": {
+      "name": "urn:ogc:def:crs:EPSG::4326"
+    }
+  },
+  "metadata": {
+    "issuer": "ISRO-NRSC (National Remote Sensing Centre)",
+    "collaborators": [
+      "IMD Hydrometeorological Directorate",
+      "NDRF Operations Directorate (MHA)"
+    ],
+    "basin": "Upper Alaknanda Basin",
+    "corridor": "Joshimath-Vishnuprayag-Helang gorge (Chamoli, Uttarakhand)",
+    "projection": "WGS84 (EPSG:4326)",
+    "coord_order": "[longitude, latitude]",
+    "ffg_model": "Dynamic Green-Ampt / Flash Flood Guidance",
+    "routing_model": "Kinematic wave cascade (Kirpich Tc)",
+    "generated_for": "Hyper-local flash flood & debris-flow early warning",
+    "schema_version": "1.4.0-ops"
+  },
+  "features": [
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [79.5520, 30.5750],
+            [79.5640, 30.5770],
+            [79.5750, 30.5760],
+            [79.5780, 30.5700],
+            [79.5770, 30.5610],
+            [79.5750, 30.5590],
+            [79.5690, 30.5570],
+            [79.5600, 30.5560],
+            [79.5510, 30.5580],
+            [79.5490, 30.5680],
+            [79.5520, 30.5750]
+          ]
+        ]
+      },
+      "properties": {
+        "ward_id": "UK-CHM-UPPER",
+        "ward_name": "Auli-Joshimath Upper Ridge Catchment",
+        "basin_name": "Upper Alaknanda Basin",
+        "administrative_tehsil": "Joshimath",
+        "risk_category": "CRITICAL_GORGE_ZONE",
+        "catchment_role": "RUNOFF_GENERATION_DEBRIS_INITIATION",
+        "drainage_area_sqkm": 6.42,
+        "elevation_min_m": 2780,
+        "elevation_max_m": 3640,
+        "mean_slope_deg": 42.5,
+        "main_channel_length_km": 4.82,
+        "channel_slope_m_per_m": 0.185,
+        "manning_roughness_n": 0.068,
+        "time_of_concentration_min": 25.5,
+        "geological_strata": "Vaikrita Group (Pelitic Schist & Garnetiferous Gneiss with deep colluvium overburden)",
+        "soil_texture": "Gravelly Sandy Loam (High Macroporosity)",
+        "saturated_hydraulic_conductivity_ksat_mm_hr": 32.5,
+        "effective_porosity_fraction": 0.40,
+        "suction_head_psi_mm": 110.0,
+        "baseflow_recession_k": 0.90,
+        "dry_soil_threshold_mm_1hr": 48.0,
+        "saturated_soil_threshold_mm_1hr": 18.5,
+        "vulnerable_population": 850,
+        "livestock_count": 320,
+        "critical_infrastructure": [
+          {
+            "name": "Auli Gondola Upper Tension Station",
+            "type": "SUBSTATION",
+            "coordinates": [79.5665, 30.5695],
+            "critical_gauge_level_m": 0.8
+          },
+          {
+            "name": "Auli-Joshimath Feeder Road Culvert (Cliff Section)",
+            "type": "HIGHWAY_TUNNEL",
+            "coordinates": [79.5728, 30.5642],
+            "critical_gauge_level_m": 1.2
+          }
+        ],
+        "designated_ndrf_evacuation_points": [
+          {
+            "shelter_id": "SHELTER-UP-01",
+            "name": "Auli Tourist Rescue Shelter",
+            "elevation_m": 3050,
+            "capacity_persons": 400,
+            "coordinates": [79.5680, 30.5710],
+            "route_id": "R-UP-01"
+          },
+          {
+            "shelter_id": "SHELTER-UP-02",
+            "name": "Gorson Bugyal Highland Camp",
+            "elevation_m": 3120,
+            "capacity_persons": 250,
+            "coordinates": [79.5762, 30.5732],
+            "route_id": "R-UP-02"
+          }
+        ],
+        "downstream_target_ward_id": "UK-CHM-MID"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [79.5510, 30.5580],
+            [79.5600, 30.5560],
+            [79.5690, 30.5570],
+            [79.5750, 30.5590],
+            [79.5770, 30.5610],
+            [79.5790, 30.5520],
+            [79.5770, 30.5430],
+            [79.5750, 30.5410],
+            [79.5700, 30.5390],
+            [79.5610, 30.5380],
+            [79.5520, 30.5400],
+            [79.5500, 30.5490],
+            [79.5510, 30.5580]
+          ]
+        ]
+      },
+      "properties": {
+        "ward_id": "UK-CHM-MID",
+        "ward_name": "Joshimath Urban Cut-Slope & Helang Flank Corridor",
+        "basin_name": "Upper Alaknanda Basin",
+        "administrative_tehsil": "Joshimath",
+        "risk_category": "CRITICAL_GORGE_ZONE",
+        "catchment_role": "LANDSLIDE_DEBRIS_TRANSIT_SETTLEMENT_CORRIDOR",
+        "drainage_area_sqkm": 5.38,
+        "elevation_min_m": 1520,
+        "elevation_max_m": 2780,
+        "mean_slope_deg": 38.2,
+        "main_channel_length_km": 5.21,
+        "channel_slope_m_per_m": 0.142,
+        "manning_roughness_n": 0.058,
+        "time_of_concentration_min": 30.0,
+        "geological_strata": "Vaikrita Group (Pelitic Schist & Garnetiferous Gneiss with deep colluvium overburden)",
+        "soil_texture": "Gravelly Sandy Loam (High Macroporosity)",
+        "saturated_hydraulic_conductivity_ksat_mm_hr": 28.0,
+        "effective_porosity_fraction": 0.38,
+        "suction_head_psi_mm": 109.0,
+        "baseflow_recession_k": 0.88,
+        "dry_soil_threshold_mm_1hr": 42.0,
+        "saturated_soil_threshold_mm_1hr": 14.0,
+        "vulnerable_population": 12400,
+        "livestock_count": 580,
+        "critical_infrastructure": [
+          {
+            "name": "Joshimath District Hospital (Chamoli)",
+            "type": "HOSPITAL",
+            "coordinates": [79.5630, 30.5485],
+            "critical_gauge_level_m": 1.5
+          },
+          {
+            "name": "Vishnuprayag-Joshimath NH-7 Bridge",
+            "type": "BRIDGE",
+            "coordinates": [79.5582, 30.5434],
+            "critical_gauge_level_m": 2.8
+          },
+          {
+            "name": "Helang 33/11 kV Substation",
+            "type": "SUBSTATION",
+            "coordinates": [79.5770, 30.5491],
+            "critical_gauge_level_m": 1.0
+          }
+        ],
+        "designated_ndrf_evacuation_points": [
+          {
+            "shelter_id": "SHELTER-MD-01",
+            "name": "Joshimath Govt. Inter College Relief Camp",
+            "elevation_m": 1900,
+            "capacity_persons": 3500,
+            "coordinates": [79.5655, 30.5502],
+            "route_id": "R-MD-01"
+          },
+          {
+            "shelter_id": "SHELTER-MD-02",
+            "name": "Joshimath Stadium High-Ground Camp",
+            "elevation_m": 1880,
+            "capacity_persons": 5000,
+            "coordinates": [79.5604, 30.5458],
+            "route_id": "R-MD-02"
+          },
+          {
+            "shelter_id": "SHELTER-MD-03",
+            "name": "Helang ITBP Battalion Camp",
+            "elevation_m": 1620,
+            "capacity_persons": 1800,
+            "coordinates": [79.5785, 30.5512],
+            "route_id": "R-MD-03"
+          }
+        ],
+        "downstream_target_ward_id": "UK-CHM-LOWER"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [79.5520, 30.5400],
+            [79.5610, 30.5380],
+            [79.5700, 30.5390],
+            [79.5750, 30.5410],
+            [79.5770, 30.5430],
+            [79.5770, 30.5330],
+            [79.5730, 30.5260],
+            [79.5650, 30.5230],
+            [79.5600, 30.5240],
+            [79.5550, 30.5290],
+            [79.5540, 30.5350],
+            [79.5520, 30.5400]
+          ]
+        ]
+      },
+      "properties": {
+        "ward_id": "UK-CHM-LOWER",
+        "ward_name": "Vishnuprayag Confluence & Riverbed Inundation Zone",
+        "basin_name": "Upper Alaknanda Basin",
+        "administrative_tehsil": "Joshimath",
+        "risk_category": "CRITICAL_GORGE_ZONE",
+        "catchment_role": "TERMINAL_HYDRAULIC_ACCUMULATION_BACKWATER_SURGE",
+        "drainage_area_sqkm": 4.06,
+        "elevation_min_m": 1240,
+        "elevation_max_m": 1560,
+        "mean_slope_deg": 34.8,
+        "main_channel_length_km": 3.62,
+        "channel_slope_m_per_m": 0.068,
+        "manning_roughness_n": 0.052,
+        "time_of_concentration_min": 29.8,
+        "geological_strata": "Vaikrita Group (Pelitic Schist & Garnetiferous Gneiss with deep colluvium overburden)",
+        "soil_texture": "Gravelly Sandy Loam (High Macroporosity)",
+        "saturated_hydraulic_conductivity_ksat_mm_hr": 24.5,
+        "effective_porosity_fraction": 0.36,
+        "suction_head_psi_mm": 108.0,
+        "baseflow_recession_k": 0.86,
+        "dry_soil_threshold_mm_1hr": 38.0,
+        "saturated_soil_threshold_mm_1hr": 11.0,
+        "vulnerable_population": 2100,
+        "livestock_count": 180,
+        "critical_infrastructure": [
+          {
+            "name": "Vishnuprayag Confluence Bridge (Alaknanda-Dhauliganga)",
+            "type": "BRIDGE",
+            "coordinates": [79.5621, 30.5245],
+            "critical_gauge_level_m": 3.5
+          },
+          {
+            "name": "Vishnuprayag Barrage Intake Structure",
+            "type": "SUBSTATION",
+            "coordinates": [79.5563, 30.5255],
+            "critical_gauge_level_m": 2.2
+          },
+          {
+            "name": "Dhauli Ganga NH-7 Viaduct (Helang-Pandukeshwar)",
+            "type": "HIGHWAY_TUNNEL",
+            "coordinates": [79.5722, 30.5265],
+            "critical_gauge_level_m": 2.6
+          }
+        ],
+        "designated_ndrf_evacuation_points": [
+          {
+            "shelter_id": "SHELTER-LW-01",
+            "name": "Vishnuprayag Pilgrim Evacuation Shelter",
+            "elevation_m": 1450,
+            "capacity_persons": 2000,
+            "coordinates": [79.5581, 30.5243],
+            "route_id": "R-LW-01"
+          },
+          {
+            "shelter_id": "SHELTER-LW-02",
+            "name": "Pandukeshwar Temple High Grounds",
+            "elevation_m": 1380,
+            "capacity_persons": 1500,
+            "coordinates": [79.5540, 30.5301],
+            "route_id": "R-LW-02"
+          }
+        ],
+        "downstream_target_ward_id": null
+      }
+    }
+  ]
+}
