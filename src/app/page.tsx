@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import type {
   BasinCascadeResult,
   CatchmentFeature,
@@ -19,6 +19,7 @@ import { TacticalAlertBanner } from "@/components/ews/TacticalAlertBanner";
 import { DisasterDispatchModal } from "@/components/ews/DisasterDispatchModal";
 import { TelemetryHealthBar } from "@/components/ews/TelemetryHealthBar";
 import { MeteoForecastPanel } from "@/components/ews/MeteoForecastPanel";
+import { CommsLayerPanel } from "@/components/ews/CommsLayerPanel";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
@@ -34,6 +35,7 @@ import {
   Github,
   Map as MapIcon,
   LineChart as LineChartIcon,
+  RadioTower,
 } from "lucide-react";
 
 const SCENARIO_META: Record<
@@ -55,6 +57,7 @@ export default function Home() {
   );
   const [error, setError] = useState<string | null>(null);
   const [dispatchOpen, setDispatchOpen] = useState(false);
+  const [commsOpen, setCommsOpen] = useState(false);
   const [activeScenario, setActiveScenario] = useState<ScenarioId | null>(null);
   const [loadedMeteoDate, setLoadedMeteoDate] = useState<string | null>(null);
 
@@ -200,6 +203,40 @@ export default function Home() {
   const surgeActive = alertLevel === "CATACLYSMIC";
   const surgeArrivalMin = result?.lower_basin_surge_arrival_min ?? 0;
 
+  /**
+   * Build the dispatch input the CommsLayerPanel forwards to /api/dispatch.
+   * Uses the selected ward's telemetry + the cascade's confluence Q /
+   * surge lead-time + the ward's evacuation shelters (fetched from the ward
+   * detail endpoint at render time would be async; here we pull them from the
+   * cascade result's evacuation_plan which the engine already attached).
+   */
+  const dispatchInput = useMemo(() => {
+    if (!result || !selectedTelemetry) return null;
+    const ward = result.per_ward_risk.find(
+      (w) => w.ward_id === selectedWard
+    );
+    if (!ward) return null;
+    const shelters = ward.evacuation_plan.map((s) => ({
+      name: s.name,
+      elevationM: s.elevation_m,
+      capacity: s.capacity_persons,
+      coordinates: s.coordinates,
+    }));
+    return {
+      wardId: ward.ward_id as
+        | "UK-CHM-UPPER"
+        | "UK-CHM-MID"
+        | "UK-CHM-LOWER",
+      riskLevel: ward.risk_level,
+      peakQ: ward.peak_discharge_m3_per_s,
+      leadTimeMins: Math.round(ward.estimated_flood_arrival_min),
+      rainfallIntensity: ward.rainfall_intensity_mm_hr,
+      soilMoisturePct: selectedTelemetry.moisture,
+      confluenceDischarge: result.cumulative_lower_basin_discharge_m3_per_s,
+      evacuationShelters: shelters,
+    };
+  }, [result, selectedTelemetry, selectedWard]);
+
   return (
     <div className="ews-app flex min-h-screen flex-col bg-slate-950 text-slate-100">
       {/* ---------------- Header ---------------- */}
@@ -269,6 +306,20 @@ export default function Home() {
             >
               <ShieldAlert className="h-3 w-3 text-rose-400" /> NDRF
             </Badge>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => setCommsOpen((v) => !v)}
+              disabled={!result}
+              className={`h-7 gap-1 px-2.5 text-[11px] font-semibold ${
+                commsOpen
+                  ? "border-cyan-500 bg-cyan-500/15 text-cyan-300"
+                  : "border-slate-700 bg-slate-800 text-slate-200 hover:bg-slate-700"
+              }`}
+            >
+              <RadioTower className="h-3.5 w-3.5" />
+              Comms Layer
+            </Button>
             <Button
               size="sm"
               onClick={() => setDispatchOpen(true)}
@@ -406,6 +457,14 @@ export default function Home() {
             onLoadDay={handleLoadMeteoDay}
             loadedDate={loadedMeteoDate}
           />
+        </div>
+
+        {/* Tactical comms + resilient failover layer — Phase 3 */}
+        <div className="mt-4">
+          <SectionTitle>
+            Tactical comms &amp; resilient failover — Phase 3 LoRa / SATCOM stack
+          </SectionTitle>
+          <CommsLayerPanel dispatchInput={dispatchInput} open={commsOpen} />
         </div>
       </main>
 
