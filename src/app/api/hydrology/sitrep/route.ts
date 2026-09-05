@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
-import { getHydrologyEngine } from "@/lib/hydrologyEngine";
+import { getHydrologyEngine } from "@/lib/hydrologyEngine.server";
 import type {
   BasinCascadeResult,
+  BroadcastChannel,
   FlashFloodRiskVector,
   RiskLevel,
 } from "@/lib/hydrologyEngine";
@@ -18,9 +19,11 @@ export const dynamic = "force-dynamic";
  * }
  *
  * Returns a field-ready dispatch bundle:
- *   - `cap`   : OASIS CAP 1.2 JSON-profile Alert document
- *   - `sitrep`: NDRF tactical Situation Report overlay
- *   - `cascade`: the BasinCascadeResult that drove the directive
+ *   - `cap_xml`   : OASIS CAP 1.2 XML Alert document (string)
+ *   - `cap`       : OASIS CAP 1.2 JSON-profile Alert document
+ *   - `sitrep`    : NDRF tactical Situation Report overlay
+ *   - `broadcast_channels`: NDRF multi-channel broadcast checklist
+ *   - `cascade`   : the BasinCascadeResult that drove the directive
  *
  * The CAP `info.area.polygon` is emitted in CAP string form
  * ("lat,lng lat,lng ...") per OASIS CAP 1.2 §3.2.4, computed from the
@@ -38,10 +41,14 @@ export async function POST(request: Request) {
     const cascade = engine.simulateBasinCascade(rainfall, soilMoisture);
 
     const cap = buildCapAlert(cascade, telemetryTimestamp);
+    const capXml = buildCapXml(cap);
     const sitrep = buildSitrep(cascade, telemetryTimestamp, rainfall, soilMoisture);
+    const broadcastChannels = engine.buildBroadcastChannels(
+      cascade.basin_wide_alert_level
+    );
 
     return NextResponse.json(
-      { cap, sitrep, cascade },
+      { cap, cap_xml: capXml, sitrep, broadcast_channels: broadcastChannels, cascade },
       { headers: { "Cache-Control": "no-store" } }
     );
   } catch (err) {
@@ -55,6 +62,9 @@ export async function POST(request: Request) {
 /* ------------------------------------------------------------------ *
  *  CAP 1.2 (OASIS) JSON-profile helpers
  * ------------------------------------------------------------------ */
+
+/** NDRF operational sender id (8-Bn-Chamoli). */
+const NDRF_SENDER_ID = "NDRF-08-BN-CHAMOLI";
 
 function severityFor(level: RiskLevel): {
   severity: string;
@@ -180,12 +190,12 @@ function buildCapAlert(cascade: BasinCascadeResult, telemetryTimestamp: string) 
   return {
     alert: {
       identifier: ident,
-      sender: "nrsc-ffews@isro.gov.in",
+      sender: `${NDRF_SENDER_ID}@ndrf.gov.in`,
       sent,
       status: "Actual",
       msgType: "Alert",
       scope: "Public",
-      code: ["NRSC-FFEWS-v1.4", "OASIS-CAP-1.2"],
+      code: ["NRSC-FFEWS-v1.5", "OASIS-CAP-1.2"],
       references: [],
       incidents: ["Upper-Alaknanda-Dhauliganga-2021-Chamoli-Corridor"],
       info: [
@@ -201,7 +211,7 @@ function buildCapAlert(cascade: BasinCascadeResult, telemetryTimestamp: string) 
           effective: sent,
           onset: sent,
           expires,
-          senderName: "ISRO-NRSC / IMD Hydrometeorological Directorate / NDRF Ops (MHA)",
+          senderName: "NDRF 08 Bn Chamoli (Ops) · ISRO-NRSC · IMD Hydromet",
           headline: `${severity.toUpperCase()} — Flash Flood & Debris Flow warning, Upper Alaknanda basin, Chamoli (alert: ${cascade.basin_wide_alert_level})`,
           description,
           instruction: cascade.ndrf_deployment_directive,
@@ -249,6 +259,72 @@ function buildCapAlert(cascade: BasinCascadeResult, telemetryTimestamp: string) 
     cap_version: "1.2",
     cap_profile: "OASIS-JSON",
   };
+}
+
+/* ------------------------------------------------------------------ *
+ *  CAP 1.2 XML serialiser (OASIS CAP 1.2 schema)
+ * ------------------------------------------------------------------ */
+
+const xmlEscape = (s: string): string =>
+  s
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&apos;");
+
+function buildCapXml(cap: ReturnType<typeof buildCapAlert>): string {
+  const a = cap.alert;
+  const info = a.info[0];
+  const params = info.parameter
+    .map(
+      (p) =>
+        `        <parameter><valueName>${xmlEscape(p.valueName)}</valueName><value>${xmlEscape(p.value)}</value></parameter>`
+    )
+    .join("\n");
+  const geocodes = info.area.geocode
+    .map(
+      (g) =>
+        `          <geocode><valueName>${xmlEscape(g.valueName)}</valueName><value>${xmlEscape(g.value)}</value></geocode>`
+    )
+    .join("\n");
+  return `<?xml version="1.0" encoding="UTF-8"?>
+<alert xmlns="urn:oasis:names:tc:emergency:cap:1.2">
+  <identifier>${xmlEscape(a.identifier)}</identifier>
+  <sender>${xmlEscape(a.sender)}</sender>
+  <sent>${xmlEscape(a.sent)}</sent>
+  <status>${xmlEscape(a.status)}</status>
+  <msgType>${xmlEscape(a.msgType)}</msgType>
+  <scope>${xmlEscape(a.scope)}</scope>
+  ${a.code.map((c) => `<code>${xmlEscape(c)}</code>`).join("\n  ")}
+  <incidents>${a.incidents.map((i) => xmlEscape(i)).join(", ")}</incidents>
+  <info>
+    <language>${xmlEscape(info.language)}</language>
+    ${info.category.map((c) => `<category>${xmlEscape(c)}</category>`).join("\n    ")}
+    <event>${xmlEscape(info.event)}</event>
+    <urgency>${xmlEscape(info.urgency)}</urgency>
+    <severity>${xmlEscape(info.severity)}</severity>
+    <certainty>${xmlEscape(info.certainty)}</certainty>
+    ${info.responseTypes.map((r) => `<responseType>${xmlEscape(r)}</responseType>`).join("\n    ")}
+    <audience>${xmlEscape(info.audience)}</audience>
+    <effective>${xmlEscape(info.effective)}</effective>
+    <onset>${xmlEscape(info.onset)}</onset>
+    <expires>${xmlEscape(info.expires)}</expires>
+    <senderName>${xmlEscape(info.senderName)}</senderName>
+    <headline>${xmlEscape(info.headline)}</headline>
+    <description>${xmlEscape(info.description)}</description>
+    <instruction>${xmlEscape(info.instruction)}</instruction>
+    <web>${xmlEscape(info.web)}</web>
+    <contact>${xmlEscape(info.contact)}</contact>
+${params}
+    <area>
+      <areaDesc>${xmlEscape(info.area.areaDesc)}</areaDesc>
+      <polygon>${xmlEscape(info.area.polygon)}</polygon>
+${geocodes}
+    </area>
+  </info>
+</alert>
+`;
 }
 
 /* ------------------------------------------------------------------ *
@@ -344,7 +420,9 @@ export type SitrepResponse = Awaited<ReturnType<typeof POST>> extends NextRespon
   ? never
   : {
       cap: ReturnType<typeof buildCapAlert>;
+      cap_xml: string;
       sitrep: ReturnType<typeof buildSitrep>;
+      broadcast_channels: BroadcastChannel[];
       cascade: BasinCascadeResult;
     };
 

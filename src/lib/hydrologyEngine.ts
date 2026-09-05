@@ -20,9 +20,6 @@
  * ============================================================================
  */
 
-import fs from "node:fs";
-import path from "node:path";
-
 /* ----------------------------------------------------------------------------
  * 1. STRICT TYPE DEFINITIONS
  * ------------------------------------------------------------------------- */
@@ -174,6 +171,71 @@ export interface BasinCascadeResult {
 export interface EvacuationPlanEntry extends EvacuationPoint {
   /** Vertical safety margin above the catchment's vulnerable toe (m). */
   safe_elevation_differential_m: number;
+}
+
+/* ----------------------------------------------------------------------------
+ * 1b. TELEMETRY TIME-SERIES & SCENARIO TYPES (Phase 2 C2 dashboard)
+ * ------------------------------------------------------------------------- */
+
+/** Operational scenario presets — map to the C2 dashboard toggle bar. */
+export type ScenarioId = "dry" | "monsoon" | "cloudburst";
+
+export interface ScenarioPreset {
+  id: ScenarioId;
+  label: string;
+  description: string;
+  rainfall: Record<string, number>;
+  soilMoisture: Record<string, number>;
+}
+
+/**
+ * A single time-step in a ward's 8-hour telemetry series (6 h observed + 2 h
+ * projected). `projected` flags the forward-looking window used by the chart
+ * to draw the surge ramp and lead-time countdown marker.
+ */
+export interface TelemetrySeriesPoint {
+  /** ISO-8601 timestamp (UTC, 15-min bucket). */
+  t: string;
+  /** Minutes offset from the simulation "now" (negative = past, 0 = now). */
+  offsetMin: number;
+  projected: boolean;
+  /** Rainfall intensity over the preceding interval (mm/hr). */
+  rainfall_mm_hr: number;
+  /** Dynamic 1-hr FFG threshold at this soil-moisture state (mm/hr). */
+  ffg_threshold_mm_hr: number;
+  /** Instantaneous discharge at the ward outlet (m³/s). */
+  discharge_m3_per_s: number;
+  /** River stage / gauge height (m above datum). */
+  gauge_height_m: number;
+}
+
+export interface WardTelemetrySeries {
+  ward_id: string;
+  ward_name: string;
+  /** Elevation of the ward outlet gauge datum (m). */
+  gauge_datum_m: number;
+  /** Critical bankfull stage at this ward's outlet (m above datum). */
+  bankfull_stage_m: number;
+  /** Peak projected discharge (m³/s) over the 2-hr forecast window. */
+  peak_projected_discharge_m3_per_s: number;
+  /** Minutes from "now" until the projected peak manifests (lead time). */
+  peak_arrival_min: number;
+  /** Full 8-hour series (oldest → newest). */
+  series: TelemetrySeriesPoint[];
+}
+
+/**
+ * NDRF multi-channel broadcast checklist entry — drives the dispatch modal's
+ * channel-matrix UI and the SITREP API's `broadcast_channels` payload.
+ */
+export interface BroadcastChannel {
+  id: string;
+  label: string;
+  description: string;
+  /** Whether this channel is auto-activated for the current alert severity. */
+  active: boolean;
+  /** Optional relay / hop-count metadata. */
+  metadata?: string;
 }
 
 /* ----------------------------------------------------------------------------
@@ -642,36 +704,280 @@ export class HydrologyEngine {
         Math.sin(dLng / 2) ** 2;
     return round(2 * R * Math.asin(Math.sqrt(s)), 3);
   }
+
+  /* -- (E) Telemetry time-series generator (Phase 2 C2 dashboard) -------- */
+
+  /**
+   * generateTelemetrySeries
+   * Builds an 8-hour time series (6 h observed + 2 h projected) for a ward
+   * given its current rainfall intensity & soil-moisture state. The series is
+   * deterministic given the inputs (no RNG) so the dashboard is reproducible
+   * across scenario toggles.
+   *
+   * Routing model used per 15-min step:
+   *  - rainfall: ramp-up over the past 6 h toward the current intensity; in
+   *    the 2-h projection, a cloudburst scenario triggers an exponential surge
+   *    that peaks at the ward's time-of-concentration then decays.
+   *  - soil moisture: relaxes exponentially toward the current value with a
+   *    3-h recession constant; projects slightly higher in the forecast window.
+   *  - FFG threshold: re-evaluated from Green-Ampt at each step's moisture.
+   *  - discharge: Rational-method Q with a single linear-reservoir lag (Tc/3)
+   *    to smear the instantaneous peak into a hydrograph.
+   *  - gauge height: stage–discharge rating h = a·Q^b fitted to the ward's
+   *    bankfull geometry (bankfull at Qbf; 2× bankfull stage at ~3·Qbf).
+   *
+   * The "now" reference is the supplied `now` ISO timestamp (defaults to the
+   * current wall-clock time). Step cadence = 15 min.
+   */
+  generateTelemetrySeries(
+    wardId: string,
+    currentRainfall_mm_hr: number,
+    currentSoilMoisturePct: number,
+    now: Date = new Date()
+  ): WardTelemetrySeries {
+    const p = this.getProperties(wardId);
+    const STEP = 15; // minutes
+    const PAST = 6 * 60; // 6 h observed
+    const FUTURE = 2 * 60; // 2 h projected
+    const steps = Math.round((PAST + FUTURE) / STEP) + 1; // inclusive
+
+    const I = Math.max(0, currentRainfall_mm_hr);
+    const m0 = clamp(currentSoilMoisturePct, 0, 100) / 100;
+    const tc = p.time_of_concentration_min;
+
+    // Stage–discharge rating curve: bankfull is the channel capacity above
+    // which the river overtops its banks and floods the floodplain. We anchor
+    // it operationally to ~120 m³/s (a realistic 1.9-m-deep gorge capacity for
+    // these 12-m-wide boulder torrents), then derive the bankfull stage from
+    // the Manning equation so each ward's rating is physically consistent.
+    // The cloudburst peak Q (>150 m³/s) overtops this; dry/monsoon stay below.
+    const bankfullQ = 120; // m³/s channel capacity
+    const b = 12; // channel width (m)
+    const nManning = p.manning_roughness_n;
+    const S = p.channel_slope_m_per_m;
+    // Solve Manning for h given Q: Q = (1/n)·b·h·h^(2/3)·S^(1/2)
+    //   → h^(5/3) = Q·n / (b·S^(1/2))  →  h = (Q·n/(b·√S))^(3/5)
+    const bankfullStage = round(
+      Math.pow((bankfullQ * nManning) / (b * Math.sqrt(Math.max(1e-4, S))), 0.6),
+      2
+    );
+    // Power-law rating h = a · Q^bExp. Anchor: h(bankfullQ) = bankfullStage.
+    // bExp ≈ 0.35 (typical Himalayan gorge rating exponent).
+    const bExp = 0.35;
+    const aCoef = bankfullStage / Math.pow(Math.max(1, bankfullQ), bExp);
+
+    const series: TelemetrySeriesPoint[] = [];
+    let peakQ = 0;
+    let peakArrival = 0;
+
+    for (let i = 0; i < steps; i++) {
+      const offsetMin = -PAST + i * STEP;
+      const projected = offsetMin > 0;
+      const t = new Date(now.getTime() + offsetMin * 60_000).toISOString();
+
+      // --- Rainfall intensity ----------------------------------------------
+      // Past: ramp up from a low antecedent baseline toward the current I,
+      // modulated by a slow diurnal sine. Future: cloudburst → exponential
+      // surge peaking at Tc then decay; otherwise hold near current I.
+      let rainfall: number;
+      if (!projected) {
+        const frac = (PAST + offsetMin) / PAST; // 0 → 1 over the past 6 h
+        const diurnal = 0.18 * Math.sin((offsetMin / 60 - 2) * Math.PI / 6);
+        rainfall = Math.max(
+          0,
+          I * (0.25 + 0.75 * frac) * (1 + diurnal)
+        );
+      } else {
+        const futMin = offsetMin;
+        if (I >= 60) {
+          // Exponential surge toward Tc, then recession.
+          const rise = Math.exp(-((futMin - tc) ** 2) / (2 * (tc * 0.35) ** 2));
+          const decay = Math.max(0.15, 1 - futMin / (FUTURE + 30));
+          rainfall = I * (0.85 + 0.6 * rise) * decay;
+        } else {
+          rainfall = I * (0.9 + 0.1 * Math.sin(futMin / 30));
+        }
+      }
+
+      // --- Soil moisture ---------------------------------------------------
+      // Relax past moisture up toward the current value (the catchment was
+      // drier 6 h ago); nudge future moisture slightly higher to reflect the
+      // continued rainfall that the forecast window implies.
+      const moistureAdj = clamp(
+        (m0 +
+          (projected
+            ? 0.05 * (offsetMin / FUTURE)
+            : -0.05 * (-offsetMin / PAST))) * 100,
+        0,
+        100
+      );
+
+      // --- FFG threshold (re-evaluated at this moisture) -------------------
+      const ffg = this.calculateDynamicThreshold(wardId, moistureAdj);
+
+      // --- Discharge (Rational + linear-reservoir smear) ------------------
+      // Lag the rainfall by Tc/3 via a simple weighted moving average.
+      const lagSteps = Math.max(1, Math.round((tc / 3) / STEP));
+      const rainLagged =
+        i >= lagSteps ? series[i - lagSteps].rainfall_mm_hr : rainfall * 0.5;
+      const effRain = 0.5 * rainfall + 0.5 * rainLagged;
+      let q = this.estimatePeakDischarge(wardId, effRain, moistureAdj);
+      // In the projected cloudburst window, superimpose the kinematic surge
+      // (runoff accumulates faster than it drains) to drive the stage up.
+      if (projected && I >= 60) {
+        const futMin = offsetMin;
+        const surge = Math.exp(-((futMin - tc) ** 2) / (2 * (tc * 0.4) ** 2));
+        q *= 1 + 0.9 * surge;
+      }
+      // Floor at a small baseflow so the curve never hits zero.
+      q = Math.max(0.4, q);
+
+      if (projected && q > peakQ) {
+        peakQ = q;
+        peakArrival = offsetMin;
+      }
+
+      // --- Stage (gauge height) from the fitted rating --------------------
+      const stage = aCoef * Math.pow(Math.max(1, q), bExp);
+
+      series.push({
+        t,
+        offsetMin,
+        projected,
+        rainfall_mm_hr: round(rainfall, 2),
+        ffg_threshold_mm_hr: ffg,
+        discharge_m3_per_s: round(q, 3),
+        gauge_height_m: round(stage, 3),
+      });
+    }
+
+    return {
+      ward_id: wardId,
+      ward_name: p.ward_name,
+      gauge_datum_m: p.elevation_min_m,
+      bankfull_stage_m: round(bankfullStage, 2),
+      peak_projected_discharge_m3_per_s: round(peakQ, 3),
+      peak_arrival_min: round(peakArrival, 1),
+      series,
+    };
+  }
+
+  /**
+   * buildBroadcastChannels
+   * Returns the NDRF multi-channel broadcast checklist for a given alert
+   * severity. Channels auto-activate at ORANGE (HIGH) and above.
+   */
+  buildBroadcastChannels(level: RiskLevel): BroadcastChannel[] {
+    const severe =
+      level === "EXTREME" || level === "CATACLYSMIC";
+    const moderate = level === "HIGH" || severe;
+    return [
+      {
+        id: "sms-c",
+        label: "CAP SMS-C Cell Broadcast to local BTS towers",
+        description:
+          "Cell-broadcast push to all Airtel/Jio/BSNL BTS in Chamoli LAC. Auto-activates at HIGH.",
+        active: moderate,
+        metadata: "BTS cells: 7 · est. reach 14,200 handsets",
+      },
+      {
+        id: "siren",
+        label: "Disaster Siren Activation (Joshimath Ward 1 & 2)",
+        description:
+          "Hard-wired electro-mechanical sirens at Joshimath Muni Ki Reti & Vishnuprayag barrage.",
+        active: severe,
+        metadata: "2 sirens · 112 dB @ 1 m",
+      },
+      {
+        id: "lora-mesh",
+        label: "LoRa Mesh Relay to Helang & Pandukeshwar Outposts",
+        description:
+          "Offline fallback: 868 MHz LoRa repeaters on Auli Ridge → Helang → Pandukeshwar. Survives cellular blackout.",
+        active: moderate,
+        metadata: "4 nodes · 1-hop latency 1.2 s",
+      },
+      {
+        id: "iaf-sar",
+        label: "IAF Bareilly Airbase SAR Notification",
+        description:
+          "SATCOM uplink to IAF Bareilly for ALH Dhruv / Mi-17 VHR standby. Auto-activates at EXTREME.",
+        active: severe,
+        metadata: "Channel: DEFSAT-1 · callsign VETTOR",
+      },
+      {
+        id: "ddma",
+        label: "Chamoli DDMA / Uttarakhand SDMA relay",
+        description:
+          "Tele-fax + email to District Disaster Management Authority, Gopeshwar; SDMA Dehradun.",
+        active: moderate,
+        metadata: "Fax: +91-1372-252-100",
+      },
+    ];
+  }
 }
 
 /* ----------------------------------------------------------------------------
- * 4. SINGLETON FACTORY (directly importable into Next.js / Node)
+ * 4. SERVER-ONLY SINGLETON FACTORY
+ * -------------------------------------------------------------------------
+ * The disk loader lives in `src/lib/hydrologyEngine.server.ts` to keep this
+ * module client-bundleable (no `node:fs` import). Server routes import the
+ * factory from there; client components import only the class + types + the
+ * SCENARIO_PRESETS constant below.
  * ------------------------------------------------------------------------- */
 
-const CATCHMENTS_FILE = path.join(
-  process.cwd(),
-  "src",
-  "data",
-  "catchments.geojson"
-);
+/* ----------------------------------------------------------------------------
+ * 5. OPERATIONAL SCENARIO PRESETS
+ * ------------------------------------------------------------------------- */
 
-let _data: CatchmentCollection | null = null;
-
-/**
- * Loads & caches the operational catchment GeoJSON from disk. Server-only.
- */
-export function loadCatchments(): CatchmentCollection {
-  if (_data) return _data;
-  const raw = fs.readFileSync(CATCHMENTS_FILE, "utf8");
-  _data = JSON.parse(raw) as CatchmentCollection;
-  return _data;
-}
-
-let _instance: HydrologyEngine | null = null;
-
-export function getHydrologyEngine(): HydrologyEngine {
-  if (!_instance) _instance = new HydrologyEngine(loadCatchments());
-  return _instance;
-}
+export const SCENARIO_PRESETS: Record<ScenarioId, ScenarioPreset> = {
+  dry: {
+    id: "dry",
+    label: "Dry Normal",
+    description:
+      "Pre-monsoon baseline. Low antecedent soil moisture, light isolated showers.",
+    rainfall: {
+      "UK-CHM-UPPER": 6,
+      "UK-CHM-MID": 6,
+      "UK-CHM-LOWER": 6,
+    },
+    soilMoisture: {
+      "UK-CHM-UPPER": 14,
+      "UK-CHM-MID": 16,
+      "UK-CHM-LOWER": 18,
+    },
+  },
+  monsoon: {
+    id: "monsoon",
+    label: "Active Monsoon",
+    description:
+      "Established monsoon trough. Sustained moderate rainfall, elevated soil moisture.",
+    rainfall: {
+      "UK-CHM-UPPER": 32,
+      "UK-CHM-MID": 34,
+      "UK-CHM-LOWER": 30,
+    },
+    soilMoisture: {
+      "UK-CHM-UPPER": 68,
+      "UK-CHM-MID": 72,
+      "UK-CHM-LOWER": 78,
+    },
+  },
+  cloudburst: {
+    id: "cloudburst",
+    label: "Critical Cloudburst",
+    description:
+      "Orographic cloudburst on the Auli ridge. Extreme intensity, near-saturated soils, debris-flow entrainment imminent.",
+    rainfall: {
+      "UK-CHM-UPPER": 96,
+      "UK-CHM-MID": 88,
+      "UK-CHM-LOWER": 78,
+    },
+    soilMoisture: {
+      "UK-CHM-UPPER": 90,
+      "UK-CHM-MID": 92,
+      "UK-CHM-LOWER": 94,
+    },
+  },
+};
 
 export default HydrologyEngine;

@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getHydrologyEngine } from "@/lib/hydrologyEngine";
+import { getHydrologyEngine } from "@/lib/hydrologyEngine.server";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
