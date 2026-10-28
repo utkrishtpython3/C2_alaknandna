@@ -18,9 +18,9 @@ export const dynamic = "force-dynamic";
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const wardId: string = body?.wardId ?? "";
-    const rainfall: number = Number(body?.rainfall ?? 0);
-    const moisture: number = Number(body?.moisture ?? 0);
+    const wardId: string = body?.wardId || body?.id || "UK-CHM-UPPER";
+    const rainfall: number = Number(body?.rainfall ?? 35);
+    const moisture: number = Number(body?.moisture ?? 60);
     const now = body?.now ? new Date(body.now as string) : new Date();
     if (Number.isNaN(now.getTime())) {
       return NextResponse.json({ error: "invalid `now`" }, { status: 400 });
@@ -49,9 +49,9 @@ export async function POST(request: Request) {
  */
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
-  const wardId = searchParams.get("wardId") ?? "";
-  const rainfall = Number(searchParams.get("rainfall") ?? "0");
-  const moisture = Number(searchParams.get("moisture") ?? "0");
+  const wardId = searchParams.get("wardId") || searchParams.get("id") || "UK-CHM-UPPER";
+  const rainfall = Number(searchParams.get("rainfall") ?? "35");
+  const moisture = Number(searchParams.get("moisture") ?? "60");
   try {
     const engine = getHydrologyEngine();
     const series = engine.generateTelemetrySeries(wardId, rainfall, moisture);

@@ -59,6 +59,48 @@ export async function POST(request: Request) {
   }
 }
 
+/**
+ * GET /api/hydrology/sitrep
+ * Returns the operational NDRF situation report for the active or baseline telemetry.
+ */
+export async function GET(request: Request) {
+  try {
+    const { searchParams } = new URL(request.url);
+    const rainfall: Record<string, number> = {
+      "UK-CHM-UPPER": Number(searchParams.get("rain_upper") ?? "32"),
+      "UK-CHM-MID": Number(searchParams.get("rain_mid") ?? "24"),
+      "UK-CHM-LOWER": Number(searchParams.get("rain_lower") ?? "18"),
+    };
+    const soilMoisture: Record<string, number> = {
+      "UK-CHM-UPPER": Number(searchParams.get("moist_upper") ?? "68"),
+      "UK-CHM-MID": Number(searchParams.get("moist_mid") ?? "72"),
+      "UK-CHM-LOWER": Number(searchParams.get("moist_lower") ?? "78"),
+    };
+    const telemetryTimestamp = new Date().toISOString();
+
+    const engine = getHydrologyEngine();
+    const cascade = engine.simulateBasinCascade(rainfall, soilMoisture);
+
+    const cap = buildCapAlert(cascade, telemetryTimestamp);
+    const capXml = buildCapXml(cap);
+    const sitrep = buildSitrep(cascade, telemetryTimestamp, rainfall, soilMoisture);
+    const broadcastChannels = engine.buildBroadcastChannels(
+      cascade.basin_wide_alert_level
+    );
+
+    return NextResponse.json(
+      { cap, cap_xml: capXml, sitrep, broadcast_channels: broadcastChannels, cascade },
+      { headers: { "Cache-Control": "no-store" } }
+    );
+  } catch (err) {
+    return NextResponse.json(
+      { error: err instanceof Error ? err.message : "sitrep failed" },
+      { status: 500 }
+    );
+  }
+}
+
+
 /* ------------------------------------------------------------------ *
  *  CAP 1.2 (OASIS) JSON-profile helpers
  * ------------------------------------------------------------------ */

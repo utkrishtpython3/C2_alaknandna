@@ -61,9 +61,9 @@ export function Results({ result, selectedWard, onSelectWard }: ResultsProps) {
         <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-4">
           <Metric
             icon={<Waves className="h-3.5 w-3.5" />}
-            label="Confluence Q"
-            value={`${result.cumulative_lower_basin_discharge_m3_per_s.toFixed(1)} m³/s`}
-            tone="cyan"
+            label="Confluence Q (Bulked)"
+            value={`${(result.cumulative_bulked_discharge_m3_per_s ?? result.cumulative_lower_basin_discharge_m3_per_s).toFixed(1)} m³/s`}
+            tone="rose"
           />
           <Metric
             icon={<Timer className="h-3.5 w-3.5" />}
@@ -166,7 +166,9 @@ function WardCard({
       <div className="grid grid-cols-2 gap-2 text-[11px]">
         <Field label="Threshold" value={`${ward.dynamic_threshold_mm_hr.toFixed(1)} mm/hr`} />
         <Field label="Rainfall" value={`${ward.rainfall_intensity_mm_hr.toFixed(0)} mm/hr`} />
-        <Field label="Peak Q" value={`${ward.peak_discharge_m3_per_s.toFixed(1)} m³/s`} tone="cyan" />
+        <Field label="Peak Q (Clear)" value={`${ward.peak_discharge_m3_per_s.toFixed(1)} m³/s`} tone="cyan" />
+        <Field label="Bulked Q (Debris)" value={`${(ward.bulked_peak_discharge_m3_per_s ?? ward.peak_discharge_m3_per_s).toFixed(1)} m³/s`} tone="rose" />
+        <Field label="Debris Bulking" value={`${(ward.debris_bulking_factor ?? 1.0).toFixed(2)}×`} tone="amber" />
         <Field label="Runoff C" value={ward.runoff_coefficient_C.toFixed(2)} />
         <Field label="Arrival" value={`${Math.round(ward.estimated_flood_arrival_min)} min`} tone="amber" />
         <Field

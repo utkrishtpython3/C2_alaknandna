@@ -551,7 +551,7 @@ interface FailoverTier {
   id: string;
   label: string;
   tier: number; // 1 = primary, 2 = secondary, 3 = tertiary, 4 = last-resort
-  status: "ACTIVE" | "CONNECTED" | "DEGRADED" | "FAILED";
+  status: "ACTIVE" | "CONNECTED" | "STANDBY" | "DEGRADED" | "FAILED";
   protocol: string;
   bitrate_kbps: number;
   latency_ms: number;

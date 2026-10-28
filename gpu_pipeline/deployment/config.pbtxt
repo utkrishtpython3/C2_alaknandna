@@ -1,0 +1,62 @@
+name: "alaknanda_swe_surrogate"
+platform: "tensorrt_plan"
+max_batch_size: 16
+
+# Dynamic Batching Configuration:
+# Aggregates multi-catchment sensor frames within a 2000 microsecond (2ms) window
+dynamic_batching {
+  preferred_batch_size: [1, 4, 8, 16]
+  max_queue_delay_microseconds: 2000
+}
+
+# Input Tensors
+input [
+  {
+    name: "INPUT_ELEVATION"
+    data_type: TYPE_FP32
+    dims: [1, 512, 512]
+  },
+  {
+    name: "INPUT_PRECIP_INFILTRATION"
+    data_type: TYPE_FP32
+    dims: [2, 512, 512]
+  },
+  {
+    name: "INPUT_INITIAL_HYDRO"
+    data_type: TYPE_FP32
+    dims: [3, 512, 512]
+  }
+]
+
+# Output Tensor
+output [
+  {
+    name: "OUTPUT_SURFACE_SURGE"
+    data_type: TYPE_FP32
+    dims: [3, 512, 512]
+  }
+]
+
+# GPU Hardware Instance Topology:
+# Pin 2 execution instances per H100 SXM5 GPU to saturate Tensor Cores
+instance_group [
+  {
+    count: 2
+    kind: KIND_GPU
+    gpus: [0]
+  }
+]
+
+# TensorRT Optimization Accelerators
+optimization {
+  execution_accelerators {
+    gpu_execution_accelerator : [ {
+      name : "tensorrt"
+      parameters { key: "precision_mode" value: "INT8" }
+      parameters { key: "enable_fast_math" value: "true" }
+    }]
+  }
+}
+
+# Model Version Policy: Serve latest compiled engine plan
+version_policy: { latest: { num_versions: 1 } }

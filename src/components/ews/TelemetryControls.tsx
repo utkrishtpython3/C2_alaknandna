@@ -2,7 +2,7 @@
 
 import { Slider } from "@/components/ui/slider";
 import { Button } from "@/components/ui/button";
-import { Loader2, Play, RotateCcw, CloudRain, Droplets } from "lucide-react";
+import { Loader2, Play, RotateCcw, CloudRain, Droplets, CheckCircle2, Zap } from "lucide-react";
 
 export interface WardTelemetry {
   ward_id: string;
@@ -18,6 +18,8 @@ interface TelemetryControlsProps {
   onReset: () => void;
   onPreset: (preset: string) => void;
   running: boolean;
+  lastRunTime?: string | null;
+  successFlash?: boolean;
 }
 
 const RAIN_MAX = 120;
@@ -30,6 +32,8 @@ export function TelemetryControls({
   onReset,
   onPreset,
   running,
+  lastRunTime = null,
+  successFlash = false,
 }: TelemetryControlsProps) {
   return (
     <div className="flex flex-col gap-4">
@@ -38,15 +42,37 @@ export function TelemetryControls({
           size="sm"
           onClick={onRun}
           disabled={running}
-          className="bg-amber-500 text-slate-950 hover:bg-amber-400"
+          className={`font-bold transition-all duration-300 shadow-md ${
+            running
+              ? "bg-amber-600 text-slate-950 opacity-90 cursor-not-allowed"
+              : successFlash
+                ? "bg-emerald-500 text-slate-950 ring-2 ring-emerald-300 shadow-emerald-500/30"
+                : "bg-amber-500 text-slate-950 hover:bg-amber-400 hover:shadow-amber-500/25 active:scale-95"
+          }`}
+          title="Simulate kinematic wave routing and flood cascade for the basin"
         >
           {running ? (
-            <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />
+            <>
+              <Loader2 className="mr-1.5 h-4 w-4 animate-spin text-slate-950" />
+              <span>Simulating...</span>
+            </>
+          ) : successFlash ? (
+            <>
+              <CheckCircle2 className="mr-1.5 h-4 w-4 text-slate-950" />
+              <span>Cascade Updated!</span>
+            </>
           ) : (
-            <Play className="mr-1.5 h-4 w-4" />
+            <>
+              <Zap className="mr-1.5 h-4 w-4 fill-slate-950" />
+              <span>Run Cascade</span>
+            </>
           )}
-          Run Cascade
         </Button>
+        {lastRunTime && (
+          <span className="hidden sm:inline-flex items-center text-[10.5px] font-mono text-slate-400">
+            Last: <span className="text-amber-300 font-bold ml-1">{lastRunTime}</span>
+          </span>
+        )}
         <Button size="sm" variant="outline" onClick={onReset} className="border-slate-700 bg-slate-800 text-slate-200 hover:bg-slate-700">
           <RotateCcw className="mr-1.5 h-4 w-4" />
           Reset

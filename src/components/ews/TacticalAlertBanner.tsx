@@ -11,7 +11,9 @@ import {
   Waves,
   Radio,
   Siren,
+  Clock,
 } from "lucide-react";
+import { useRealtimeClock } from "@/hooks/useRealtimeClock";
 
 /**
  * TacticalAlertBanner
@@ -114,34 +116,36 @@ export function TacticalAlertBanner({
   const isSevere = isRed || isOrange;
 
   const siren = useAlertSiren();
+  const { arm: armSiren, start: startSiren, stop: stopSiren, toggleMute: toggleSirenMute, muted: sirenMuted } = siren;
+  const realtimeClock = useRealtimeClock();
 
   // Arm the Web Audio context on the first user gesture (autoplay policy).
   useEffect(() => {
-    const onGesture = () => siren.arm();
+    const onGesture = () => armSiren();
     window.addEventListener("pointerdown", onGesture, { once: true });
     window.addEventListener("keydown", onGesture, { once: true });
     return () => {
       window.removeEventListener("pointerdown", onGesture);
       window.removeEventListener("keydown", onGesture);
     };
-  }, [siren]);
+  }, [armSiren]);
 
   // Drive the klaxon from the severity. RED / ORANGE → wail; else silent.
   useEffect(() => {
-    if (isSevere && !siren.muted) {
-      siren.start();
+    if (isSevere && !sirenMuted) {
+      startSiren();
     } else {
-      siren.stop();
+      stopSiren();
     }
-  }, [isSevere, siren.muted, siren]);
+  }, [isSevere, sirenMuted, startSiren, stopSiren]);
 
   // Listen for external "toggle siren" requests (from the presentation
   // hotkey controller at the page level — the M key).
   useEffect(() => {
-    const onToggle = () => siren.toggleMute();
+    const onToggle = () => toggleSirenMute();
     window.addEventListener("ews:toggle-siren", onToggle);
     return () => window.removeEventListener("ews:toggle-siren", onToggle);
-  }, [siren]);
+  }, [toggleSirenMute]);
 
   // Animated countdown timer (seconds) to surge arrival at Vishnuprayag.
   // Seeded lazily inside the interval callback (no synchronous setState in
@@ -205,11 +209,21 @@ export function TacticalAlertBanner({
         </div>
 
         <div className="min-w-0 flex-1">
-          <p className="text-[10px] uppercase tracking-wider text-slate-500">
-            Basin-wide alert — Upper Alaknanda–Dhauliganga
-          </p>
-          <p className="font-mono text-[11px] text-slate-300">
-            {timestamp.replace("T", " · ").replace(/\..+Z$/, " UTC")}
+          <div className="flex flex-wrap items-center gap-2">
+            <p className="text-[10px] uppercase tracking-wider text-slate-400">
+              Basin-wide alert — Upper Alaknanda–Dhauliganga
+            </p>
+            <span className="inline-flex items-center gap-1.5 rounded-md bg-slate-900/90 px-2 py-0.5 text-[10.5px] font-mono text-cyan-300 border border-cyan-800/60 shadow-sm">
+              <Clock className="h-3 w-3 text-cyan-400 animate-pulse" />
+              <span className="font-bold text-cyan-200">{realtimeClock.istTime}</span>
+              <span className="text-[9px] text-cyan-400 font-semibold">IST</span>
+              <span className="text-slate-600">|</span>
+              <span className="text-slate-400">{realtimeClock.utcTime}</span>
+              <span className="text-[9px] text-slate-500">UTC</span>
+            </span>
+          </div>
+          <p className="font-mono text-[11px] text-slate-300 mt-0.5">
+            SITREP MODEL EPOCH: {timestamp.replace("T", " · ").replace(/\..+Z$/, " UTC")}
           </p>
         </div>
 

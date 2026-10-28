@@ -30,8 +30,11 @@ export const metadata: Metadata = {
   ],
   authors: [{ name: "ISRO-NRSC / IMD / NDRF" }],
   icons: {
-    icon: "https://z-cdn.chatglm.cn/z-ai/static/logo.svg",
+    icon: "/icon.svg",
+    shortcut: "/icon.svg",
+    apple: "/icon.svg",
   },
+  manifest: "/manifest.json",
   openGraph: {
     title: "Alaknanda Flash Flood EWS",
     description:
@@ -52,6 +55,17 @@ export default function RootLayout({
       >
         {children}
         <Toaster />
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              if ('serviceWorker' in navigator && window.location.protocol === 'http:' || window.location.protocol === 'https:') {
+                window.addEventListener('load', () => {
+                  navigator.serviceWorker.register('/sw.js').catch(() => {});
+                });
+              }
+            `,
+          }}
+        />
       </body>
     </html>
   );

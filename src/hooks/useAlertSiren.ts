@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 /**
  * useAlertSiren
@@ -195,6 +195,7 @@ export function useAlertSiren(): AlertSirenApi {
 
   /** Stop the siren loop with a fast fade to avoid clicks. */
   const stop = useCallback(() => {
+    if (!stateRef.current.active && !gainRef.current) return;
     const ctx = ctxRef.current;
     const g = gainRef.current;
     if (ctx && g) {
@@ -209,8 +210,10 @@ export function useAlertSiren(): AlertSirenApi {
     }
     // Defer teardown until after the fade.
     setTimeout(teardown, 180);
-    stateRef.current.active = false;
-    setActive(false);
+    if (stateRef.current.active) {
+      stateRef.current.active = false;
+      setActive(false);
+    }
   }, [teardown]);
 
   const toggleMute = useCallback(() => {
@@ -233,5 +236,8 @@ export function useAlertSiren(): AlertSirenApi {
   // Cleanup on unmount.
   useEffect(() => teardown, [teardown]);
 
-  return { armed, muted, active, arm, start, stop, toggleMute };
+  return useMemo(
+    () => ({ armed, muted, active, arm, start, stop, toggleMute }),
+    [armed, muted, active, arm, start, stop, toggleMute]
+  );
 }

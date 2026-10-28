@@ -6,22 +6,24 @@ import type { ScenarioId } from "@/lib/hydrologyEngine";
 /**
  * usePresentationControls
  * ----------------------------------------------------------------------------
- * A global keyboard hotkey listener engineered for 3-minute hackathon pitch
- * pacing. During a live demo, fumbling with tiny UI buttons ruins the flow —
- * this hook lets the presenter drive the entire C2 dashboard from the
- * keyboard:
+ * A global keyboard hotkey listener engineered for high-tempo tactical operations.
+ * Allows incident commanders to drive the entire C2 dashboard from the keyboard:
  *
  *   Key 1  → Dry / Pre-Monsoon Baseline (all green, Q ≈ 16 m³/s)
  *   Key 2  → Active Monsoon Saturated (yellow/orange, soil moisture 89%)
  *   Key 3  → Cataclysmic Cloudburst Cascade (red, sirens, countdown, surge)
+ *   Key 4  → 2021 Chamoli GLOF & Debris Flow Scenario
+ *   Key T  → 60-Second Tactical Mission Briefing
+ *   Key L  → Non-Newtonian Rheology Lab (2.10x Bulking)
+ *   Key V  → Garhwali & Hindi Voice Megaphone
+ *   Key U  → UAV Drone Recon Sentry HUD
  *   Key M  → Toggle Audio Klaxon Siren (mute/unmute)
  *   Key D  → Open the CAP Emergency Dispatch Modal
  *   Key S  → Auto-download the NDRF Incident SITREP JSON
  *
  * The hook ignores key events when the user is typing in an input/textarea
  * (so telemetry sliders don't misfire). It also exposes a collapsible
- * "Pitch Controls Guide" badge state so judges see the system is engineered
- * for rapid command-line operations.
+ * "Tactical Controls Guide" badge state for command-line operations.
  */
 
 export interface PresentationControlsOptions {
@@ -29,12 +31,22 @@ export interface PresentationControlsOptions {
   onToggleSiren: () => void;
   onOpenDispatch: () => void;
   onDownloadSitrep: () => void;
+  onOpenSitrep?: () => void;
+  onOpenMultiSource?: () => void;
+  onOpenJudgeTour?: () => void;
+  onOpenRheologyLab?: () => void;
+  onOpenVoiceBroadcast?: () => void;
+  onOpenNebiusHpc?: () => void;
+  onOpenValleyCrossSection?: () => void;
+  onStartDroneTour?: () => void;
+  onOpenNdrfCommandPost?: () => void;
+  onToggleZenMode?: () => void;
   /** When false, the hotkey listener is suspended (e.g. dispatch modal open). */
   enabled?: boolean;
 }
 
 export interface PresentationControlsApi {
-  /** Whether the pitch-controls guide badge is expanded. */
+  /** Whether the tactical controls guide badge is expanded. */
   guideVisible: boolean;
   toggleGuide: () => void;
   /** The last key pressed (for a subtle "key received" visual confirmation). */
@@ -95,6 +107,10 @@ export function usePresentationControls(
           o.onScenario("cloudburst");
           setLastKey("3");
           break;
+        case "4":
+          o.onScenario("glof");
+          setLastKey("4");
+          break;
         case "M":
           o.onToggleSiren();
           setLastKey("M");
@@ -106,6 +122,47 @@ export function usePresentationControls(
         case "S":
           o.onDownloadSitrep();
           setLastKey("S");
+          break;
+        case "R":
+          if (o.onOpenSitrep) o.onOpenSitrep();
+          setLastKey("R");
+          break;
+        case "F":
+          if (o.onOpenMultiSource) o.onOpenMultiSource();
+          setLastKey("F");
+          break;
+        case "T":
+          if (o.onOpenJudgeTour) o.onOpenJudgeTour();
+          setLastKey("T");
+          break;
+        case "L":
+          if (o.onOpenRheologyLab) o.onOpenRheologyLab();
+          setLastKey("L");
+          break;
+        case "V":
+          if (o.onOpenVoiceBroadcast) o.onOpenVoiceBroadcast();
+          setLastKey("V");
+          break;
+        case "P":
+          if (o.onOpenNebiusHpc) o.onOpenNebiusHpc();
+          setLastKey("P");
+          break;
+        case "X":
+          if (o.onOpenValleyCrossSection) o.onOpenValleyCrossSection();
+          setLastKey("X");
+          break;
+        case "U":
+          if (o.onStartDroneTour) o.onStartDroneTour();
+          setLastKey("U");
+          break;
+        case "I":
+          if (o.onOpenNdrfCommandPost) o.onOpenNdrfCommandPost();
+          setLastKey("I");
+          break;
+        case "Z":
+          if (o.onToggleZenMode) o.onToggleZenMode();
+          else window.dispatchEvent(new CustomEvent("ews:toggle-zen-mode"));
+          setLastKey("Z");
           break;
         default:
           return; // don't preventDefault for unmapped keys

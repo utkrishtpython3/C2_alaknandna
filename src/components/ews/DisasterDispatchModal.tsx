@@ -124,7 +124,54 @@ interface DispatchBundle {
   cascade: BasinCascadeResult;
 }
 
-type PayloadFormat = "xml" | "json";
+type PayloadFormat = "xml" | "json" | "hindi" | "garhwali";
+
+function generateHindiAlert(bundle: DispatchBundle): string {
+  const { sitrep, cap } = bundle;
+  const leadMin = sitrep.lower_basin_surge_arrival_min;
+  const q = sitrep.cumulative_lower_basin_discharge_m3_per_s;
+  const level = sitrep.basin_wide_alert_level;
+  return `[राष्ट्रीय आपदा मोचन बल (NDRF) - आपातकालीन फ्लैश फ्लड चेतावनी]
+जारीकर्ता: कमान्डेंट, 14वीं वाहिनी एन.डी.आर.एफ. (चमोली अग्रिम बेस)
+घटना आईडी: ${sitrep.sitrep_id} | CAP आईडी: ${cap.alert.identifier}
+समय: ${new Date().toLocaleString("hi-IN", { timeZone: "Asia/Kolkata" })} IST
+प्रभावित क्षेत्र: जोशीमठ, विष्णुप्रयाग, हेलंग गॉर्ज, पांडुकेश्वर (उत्तराखण्ड)
+
+चेतावनी स्तर: ${level === "CATACLYSMIC" ? "अति-गंभीर लाल चेतावनी (RED ALERT - IMMEDIATE EVACUATION)" : level === "EXTREME" ? "गंभीर चेतावनी (ORANGE ALERT - PREPAREDNESS)" : "सतर्कता चेतावनी (YELLOW ALERT)"}
+अनुमानित बाढ़ एवं मलबा प्रवाह आगमन: ${leadMin} मिनट
+संगम स्थल पर अनुमानित जल निर्वहन: ${q.toFixed(1)} घन मीटर/सेकंड (m³/s)
+
+तत्काल सुरक्षा निर्देश:
+1. अलकनंदा एवं धौलीगंगा नदी के तटीय एवं ढलान वाले क्षेत्रों को तत्काल खाली करें।
+2. बद्रीनाथ राष्ट्रीय राजमार्ग (NH-7) पर सभी प्रकार के वाहनों का आवागमन तुरंत रोकें।
+3. ग्रामवासी अपने मवेशियों को सुरक्षित ऊँचे स्थानों पर ले जाएँ और खूँटों से खोल दें।
+4. प्राथमिक शरण स्थल: जोशीमठ जीआईसी कैंप (क्षमता: 3500) एवं विष्णुप्रयाग हाई ग्राउंड में शरण लें।
+5. एन.डी.आर.एफ. त्वरित प्रतिक्रिया दल (QRT) एवं राहत नावें क्षेत्र में सक्रिय हैं।
+
+आपातकालीन हेल्पलाइन: NDRF कंट्रोल रूम: 1070 / 1078 | सैटेलाइट फोन: 01372-252101`;
+}
+
+function generateGarhwaliAlert(bundle: DispatchBundle): string {
+  const { sitrep } = bundle;
+  const leadMin = sitrep.lower_basin_surge_arrival_min;
+  const q = sitrep.cumulative_lower_basin_discharge_m3_per_s;
+  return `[एन.डी.आर.एफ. आपातकालीन चेतावनी - अलकनंदा-धौलीगंगा घाटी]
+क्षेत्र: जोशीमठ, विष्णुप्रयाग, हेलंग, औली, पाण्डुकेश्वर (चमोली गढ़वाल)
+संदेश: फ्लैश फ्लड (बाढ एवं मलबो) की चेतावनी!
+
+धौलीगंगा अर अलकनंदा नदी मा पाणी को भारी उफान और मलबो (कांदो-पत्थर) आणा को भारी खतरा छ।
+बाढ़ पोखण मा केवल ${leadMin} मिनट को बगत (समय) बच्यों छ!
+पानी को बहाव: ${q.toFixed(1)} घन मीटर/सेकंड।
+
+सब्यूं ग्रामवासियों से हाथ जोड़िकि निहोरा (अपील) छ:
+1. नदी गदेरों के कन्द (किनारे) फौरन छोड़ि द्या और ऊँचा डांडों (पहाड़ों) पर चड़ी जावा!
+2. बद्रीनाथ सड़क (NH-7) पर गाड़ी-घोड़ा कतई न चलावा।
+3. अपणी गौ-भैंसों तैं खूँटों से खोली द्या ताकि ऊ अपणी जान बचाई सकन।
+4. जोशीमठ सरकारी स्कूल (GIC) और स्टेडियम मा सुरक्षित कैंप बणयां छन, उथैं जावा।
+5. गॉंव-गॉंव मा ढोल-नगाड़ों और लाउडस्पीकर से सब्यूं तैं होशियार करा!
+
+एन.डी.आर.एफ. का जवान घाटी मा तैणात छन। घबरावा नि, धीरज और हिम्मत राखा!`;
+}
 
 export function DisasterDispatchModal({
   open,
@@ -185,7 +232,9 @@ export function DisasterDispatchModal({
   const payloadText = (() => {
     if (!bundle) return "";
     if (payloadTab === "xml") return bundle.cap_xml;
-    return JSON.stringify(bundle.cap, null, 2);
+    if (payloadTab === "json") return JSON.stringify(bundle.cap, null, 2);
+    if (payloadTab === "hindi") return generateHindiAlert(bundle);
+    return generateGarhwaliAlert(bundle);
   })();
 
   const handleCopy = async () => {
@@ -202,15 +251,14 @@ export function DisasterDispatchModal({
   const handleDownload = () => {
     if (!bundle) return;
     const isXml = payloadTab === "xml";
-    const blob = new Blob([payloadText], {
-      type: isXml ? "application/xml" : "application/json",
-    });
+    const isJson = payloadTab === "json";
+    const mime = isXml ? "application/xml" : isJson ? "application/json" : "text/plain;charset=utf-8";
+    const ext = isXml ? "cap.xml" : isJson ? "cap.json" : `${payloadTab}.txt`;
+    const blob = new Blob([payloadText], { type: mime });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = isXml
-      ? `${bundle.sitrep.sitrep_id}.cap.xml`
-      : `${bundle.sitrep.sitrep_id}.cap.json`;
+    a.download = `${bundle.sitrep.sitrep_id}.${ext}`;
     document.body.appendChild(a);
     a.click();
     a.remove();
@@ -391,20 +439,32 @@ function DispatchDocument({
           <div className="mb-2 flex items-center justify-between">
             <h4 className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wider text-slate-400">
               <FileText className="h-3 w-3" />
-              CAP 1.2 Payload
+              CAP 1.2 Multi-Format Payload
             </h4>
             <TabsList className="h-7 bg-slate-900 p-0.5 ring-1 ring-slate-700">
               <TabsTrigger
                 value="xml"
-                className="h-6 px-2.5 text-[10px] font-bold data-[state=active]:bg-amber-500 data-[state=active]:text-slate-950 data-[state=inactive]:text-slate-400"
+                className="h-6 px-2 text-[10px] font-bold data-[state=active]:bg-amber-500 data-[state=active]:text-slate-950 data-[state=inactive]:text-slate-400"
               >
-                XML
+                XML (OASIS)
               </TabsTrigger>
               <TabsTrigger
                 value="json"
-                className="h-6 px-2.5 text-[10px] font-bold data-[state=active]:bg-amber-500 data-[state=active]:text-slate-950 data-[state=inactive]:text-slate-400"
+                className="h-6 px-2 text-[10px] font-bold data-[state=active]:bg-amber-500 data-[state=active]:text-slate-950 data-[state=inactive]:text-slate-400"
               >
-                JSON
+                JSON (NDMA)
+              </TabsTrigger>
+              <TabsTrigger
+                value="hindi"
+                className="h-6 px-2 text-[10px] font-bold data-[state=active]:bg-cyan-500 data-[state=active]:text-slate-950 data-[state=inactive]:text-slate-400"
+              >
+                हिन्दी (SMS)
+              </TabsTrigger>
+              <TabsTrigger
+                value="garhwali"
+                className="h-6 px-2 text-[10px] font-bold data-[state=active]:bg-emerald-500 data-[state=active]:text-slate-950 data-[state=inactive]:text-slate-400"
+              >
+                गढ़वाली (VHF)
               </TabsTrigger>
             </TabsList>
           </div>
@@ -413,6 +473,16 @@ function DispatchDocument({
           </TabsContent>
           <TabsContent value="json">
             <CodeBlock text={payloadText} lang="json" />
+          </TabsContent>
+          <TabsContent value="hindi">
+            <pre className="max-h-72 overflow-auto rounded-md border border-cyan-800/60 bg-slate-950/90 p-3 font-sans text-xs leading-relaxed text-cyan-100 whitespace-pre-wrap">
+              {payloadText}
+            </pre>
+          </TabsContent>
+          <TabsContent value="garhwali">
+            <pre className="max-h-72 overflow-auto rounded-md border border-emerald-800/60 bg-slate-950/90 p-3 font-sans text-xs leading-relaxed text-emerald-100 whitespace-pre-wrap">
+              {payloadText}
+            </pre>
           </TabsContent>
         </Tabs>
       </div>

@@ -1,0 +1,16 @@
+[1:v]format=rgba,fade=t=in:st=0.0:d=0.5:alpha=1,fade=t=out:st=4.0:d=0.5:alpha=1[intro_f];
+[2:v]format=rgba,fade=t=in:st=5.0:d=0.6:alpha=1,fade=t=out:st=25.4:d=0.6:alpha=1[b1_f];
+[3:v]format=rgba,fade=t=in:st=32.0:d=0.6:alpha=1,fade=t=out:st=55.4:d=0.6:alpha=1[b2_f];
+[4:v]format=rgba,fade=t=in:st=62.0:d=0.6:alpha=1,fade=t=out:st=81.4:d=0.6:alpha=1[b3_f];
+[5:v]format=rgba,fade=t=in:st=84.0:d=0.6:alpha=1,fade=t=out:st=105.4:d=0.6:alpha=1[b4_f];
+[6:v]format=rgba,fade=t=in:st=109.0:d=0.6:alpha=1,fade=t=out:st=123.4:d=0.6:alpha=1[b5_f];
+[7:v]format=rgba,fade=t=in:st=126.0:d=0.6:alpha=1,fade=t=out:st=138.4:d=0.6:alpha=1[b6_f];
+[8:v]format=rgba,fade=t=in:st=140.0:d=0.6:alpha=1,fade=t=out:st=144.5:d=0.4:alpha=1[outro_f];
+[0:v][intro_f]overlay=0:0:enable='between(t,0.0,4.5)'[v_step1];
+[v_step1][b1_f]overlay=0:0:enable='between(t,5.0,26.0)'[v_step2];
+[v_step2][b2_f]overlay=0:0:enable='between(t,32.0,56.0)'[v_step3];
+[v_step3][b3_f]overlay=0:0:enable='between(t,62.0,82.0)'[v_step4];
+[v_step4][b4_f]overlay=0:0:enable='between(t,84.0,106.0)'[v_step5];
+[v_step5][b5_f]overlay=0:0:enable='between(t,109.0,124.0)'[v_step6];
+[v_step6][b6_f]overlay=0:0:enable='between(t,126.0,139.0)'[v_step7];
+[v_step7][outro_f]overlay=0:0:enable='between(t,140.0,144.9)'[v_out]

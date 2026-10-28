@@ -11,9 +11,9 @@ export const dynamic = "force-dynamic";
  */
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
-  const wardId = searchParams.get("wardId") ?? "";
-  const soilMoisture = Number(searchParams.get("soilMoisture") ?? "0");
-  const rainfall = Number(searchParams.get("rainfall") ?? "0");
+  const wardId = searchParams.get("wardId") || searchParams.get("id") || "UK-CHM-UPPER";
+  const soilMoisture = Number(searchParams.get("soilMoisture") ?? "50");
+  const rainfall = Number(searchParams.get("rainfall") ?? "25");
 
   try {
     const engine = getHydrologyEngine();
